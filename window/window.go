@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
@@ -25,7 +27,7 @@ import (
 	"github.com/roffe/gocan/pkg/gmlan"
 )
 
-var enableLicenseCheck = false
+var enableLicenseCheck = true
 
 //go:embed hk_white.png
 var icon []byte
@@ -79,21 +81,18 @@ type Main struct {
 	vin []byte
 }
 
-const timePerTick = 14.5
-
-func freqToSeconds(f float64) float64 {
-	return timePerTick * f / 1000
-}
+const (
+	prefsSelectedDLLKey = "selectedDLL"
+	timePerTick         = 14.5
+)
 
 func NewMainWindow() *Main {
-
 	a := app.NewWithID("com.trionictuning.hcd")
-	w := a.NewWindow("Saab NG9-3 Halogen Check Disabler")
+	a.Settings().SetTheme(theme.DefaultTheme())
 
+	w := a.NewWindow("Saab NG9-3 Halogen Check Disabler")
 	w.SetIcon(iconRes)
 	w.Resize(fyne.NewSize(850, 450))
-	//w.SetFixedSize(true)
-	a.Settings().SetTheme(theme.DefaultTheme())
 
 	m := &Main{
 		App:               a,
@@ -106,17 +105,20 @@ func NewMainWindow() *Main {
 		calculatedUECFreq: widget.NewLabel("N/A"),
 		calculatedRECFreq: widget.NewLabel("N/A"),
 	}
-	f1 := &desktop.CustomShortcut{KeyName: fyne.KeyTab, Modifier: fyne.KeyModifierControl}
-	w.Canvas().AddShortcut(f1, func(shortcut fyne.Shortcut) {
-		if m.customValues.Hidden {
-			m.customValues.Show()
-			a.Preferences().SetBool("customValues", true)
-		} else {
-			m.customValues.Hide()
-			a.Preferences().SetBool("customValues", false)
-		}
-		w.Content().Refresh()
-	})
+
+	w.Canvas().AddShortcut(
+		&desktop.CustomShortcut{KeyName: fyne.KeyTab, Modifier: fyne.KeyModifierControl},
+		func(shortcut fyne.Shortcut) {
+			if m.customValues.Hidden {
+				m.customValues.Show()
+				a.Preferences().SetBool("customValues", true)
+			} else {
+				m.customValues.Hide()
+				a.Preferences().SetBool("customValues", false)
+			}
+			w.Content().Refresh()
+		},
+	)
 
 	m.output = widget.NewListWithData(
 		m.outputData,
@@ -139,7 +141,6 @@ func NewMainWindow() *Main {
 	)
 
 	m.licenseInput = &widget.Entry{
-		//Text:        m.App.Preferences().StringWithFallback("licenseKey", ""),
 		PlaceHolder: "Enter license key",
 		OnChanged: func(s string) {
 			m.licenseKey = s
@@ -147,7 +148,6 @@ func NewMainWindow() *Main {
 		},
 		Password: true,
 	}
-
 	m.licenseInput.SetText(m.App.Preferences().StringWithFallback("licenseKey", ""))
 
 	m.uecFoglightsCheckbox = widget.NewCheck("", m.setUECMask(1, 6))
@@ -219,9 +219,107 @@ func NewMainWindow() *Main {
 		}
 	}
 
+	m.portsList = j2534.FindDLLs()
+	var adapters []string
+	for _, p := range m.portsList {
+		adapters = append(adapters, p.Name)
+	}
+
+	m.dllSelector = &widget.Select{
+		Alignment: fyne.TextAlignCenter,
+		Options:   adapters,
+		OnChanged: func(s string) {
+			for _, p := range m.portsList {
+				if p.Name == s {
+					m.selectedDLL = p.FunctionLibrary
+					m.App.Preferences().SetString(prefsSelectedDLLKey, p.Name)
+					break
+				}
+			}
+		},
+	}
+
+	if selected := m.App.Preferences().String(prefsSelectedDLLKey); selected != "" {
+		m.dllSelector.SetSelected(selected)
+	}
+
+	m.setBtn = widget.NewButton("Save configuration", m.setState)
+	m.setBtn.Icon = theme.DocumentSaveIcon()
+	m.getBtn = widget.NewButton("Load configuration", func() {
+		if err := m.getStates(); err != nil {
+			m.writeOutput(err.Error())
+		}
+	})
+	m.getBtn.Icon = theme.DownloadIcon()
+
 	w.SetContent(m.Layout())
-	//m.writeOutput("TrionicTuning Halogen Check Disabler")
 	return m
+}
+
+func (m *Main) Layout() fyne.CanvasObject {
+	m.customValues = container.New(layout.NewGridLayout(2),
+		container.NewMax(
+			container.NewBorder(nil, nil, widget.NewLabel("UEC value:"), nil, m.uecInput),
+		),
+		container.NewMax(
+			container.NewBorder(nil, nil, widget.NewLabel("REC value:"), nil, m.recInput),
+		),
+	)
+	m.customValues.Hidden = !m.App.Preferences().Bool("customValues")
+
+	header := container.New(
+		layout.NewGridLayout(1),
+		container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, m.licenseInput),
+	)
+
+	header.Hidden = !enableLicenseCheck
+
+	footer := container.NewVBox(
+		container.New(layout.NewGridLayout(2),
+			container.NewMax(
+				container.NewBorder(nil, nil, widget.NewLabel("UEC check interval:"), m.calculatedUECFreq, widget.NewSliderWithData(0, 255, m.uecCheckFreq)),
+				widget.NewLabel(""),
+			),
+			container.NewMax(
+				container.NewBorder(nil, nil, widget.NewLabel("REC check interval:"), m.calculatedRECFreq, widget.NewSliderWithData(0, 255, m.recCheckFreq)),
+			),
+		),
+		m.customValues,
+		container.New(layout.NewGridLayout(2), m.getBtn, m.setBtn),
+	)
+
+	return container.NewBorder(
+		nil,
+		footer,
+		nil,
+		nil,
+		&container.Split{
+			Horizontal: true,
+			Offset:     0.8,
+			Leading: container.NewBorder(
+				header,
+				nil,
+				nil,
+				nil,
+				m.output,
+			),
+			Trailing: container.NewVBox(
+				m.dllSelector,
+				widget.NewForm(
+					widget.NewFormItem("Front Fog Lights", m.uecFoglightsCheckbox),
+					widget.NewFormItem("Rear Fog Lights", m.recFoglightsCheckbox),
+					widget.NewFormItem("Low Beams", m.uecLowBeamsCheckbox),
+					widget.NewFormItem("High Beams", m.uecHighBeamsCheckbox),
+					widget.NewFormItem("Front Turn Signals", m.uecTurnSignalsCheckbox),
+					widget.NewFormItem("Rear Turn Signals", m.recTurnSignalsCheckbox),
+					widget.NewFormItem("Tail Lights", m.recTailLightsCheckbox),
+					widget.NewFormItem("Stop Lights", m.recStopLightsCheckbox),
+					widget.NewFormItem("Reverse Light", m.recReverseLightsCheckbox),
+					widget.NewFormItem("License Plate", m.recNumberPlateCheckbox),
+				),
+			),
+		},
+	)
 }
 
 func (m *Main) initCAN() (*gocan.Client, error) {
@@ -383,10 +481,6 @@ func (m *Main) setInternalRECState(data []byte) {
 }
 
 func (m *Main) setState() {
-	if err := m.checkLicense(); err != nil {
-		m.writeOutput(err.Error())
-		return
-	}
 	m.disableButtons()
 	defer m.enableButtons()
 
@@ -405,6 +499,11 @@ func (m *Main) setState() {
 		return
 	}
 
+	if len(m.ub) < 4 || len(m.rb) != 6 {
+		dialog.ShowError(errors.New("Load car configuration first"), m.Window) //lint:ignore ST1005 ignore this
+		return
+	}
+
 	if err := uec.WriteDataByIdentifier(context.TODO(), 0x4D, m.ub); err != nil {
 		m.outputData.Append("UEC: " + err.Error())
 		return
@@ -417,128 +516,8 @@ func (m *Main) setState() {
 		return
 	}
 
-	m.writeOutput("Wrote configuration to car successfully")
-}
-
-const prefsSelectedDLLKey = "selectedDLL"
-
-func (m *Main) Layout() fyne.CanvasObject {
-	m.portsList = j2534.FindDLLs()
-	var adapters []string
-	for _, p := range m.portsList {
-		adapters = append(adapters, p.Name)
-	}
-
-	m.dllSelector = &widget.Select{
-		Alignment: fyne.TextAlignCenter,
-		Options:   adapters,
-		OnChanged: func(s string) {
-			//log.Println("Selected adapter:", s)
-			for _, p := range m.portsList {
-				if p.Name == s {
-					m.selectedDLL = p.FunctionLibrary
-					m.App.Preferences().SetString(prefsSelectedDLLKey, p.Name)
-					break
-				}
-			}
-		},
-	}
-
-	if selected := m.App.Preferences().String(prefsSelectedDLLKey); selected != "" {
-		m.dllSelector.SetSelected(selected)
-	}
-
-	m.setBtn = widget.NewButton("Save configuration", m.setState)
-	m.setBtn.Icon = theme.DocumentSaveIcon()
-	m.getBtn = widget.NewButton("Load configuration", func() {
-		if err := m.getStates(); err != nil {
-			m.writeOutput(err.Error())
-		}
-	})
-	m.getBtn.Icon = theme.DownloadIcon()
-
-	m.customValues = container.New(layout.NewGridLayout(2),
-		container.NewMax(
-			container.NewBorder(nil, nil, widget.NewLabel("UEC value:"), nil, m.uecInput),
-		),
-		container.NewMax(
-			container.NewBorder(nil, nil, widget.NewLabel("REC value:"), nil, m.recInput),
-		),
-	)
-	m.customValues.Hidden = !m.App.Preferences().Bool("customValues")
-
-	header := container.New(
-		layout.NewGridLayout(1),
-		container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, m.licenseInput))
-
-	footer := container.NewVBox(
-		container.New(layout.NewGridLayout(2),
-			container.NewMax(
-				container.NewBorder(nil, nil, widget.NewLabel("UEC check interval:"), m.calculatedUECFreq, widget.NewSliderWithData(0, 255, m.uecCheckFreq)),
-				widget.NewLabel(""),
-			),
-			container.NewMax(
-				container.NewBorder(nil, nil, widget.NewLabel("REC check interval:"), m.calculatedRECFreq, widget.NewSliderWithData(0, 255, m.recCheckFreq)),
-			),
-		),
-		m.customValues,
-		container.New(layout.NewGridLayout(2), m.getBtn, m.setBtn),
-	)
-
-	return container.NewBorder(
-		nil,
-		footer,
-		nil,
-		nil,
-		&container.Split{
-			Horizontal: true,
-			Offset:     0.8,
-			Leading: container.NewBorder(
-				header,
-				nil,
-				nil,
-				nil,
-				m.output,
-			),
-			Trailing: container.NewVBox(
-				m.dllSelector,
-				widget.NewForm(
-					/*
-						UEC [1]
-						80 - ???
-						40 - fog lights
-						20 - dipped beam
-						10 - main beam
-						01 - direction indicators
-
-						REC [1]
-						80 - ?
-						40 - right fog light
-						20 - left rear tail
-						10 - left reversing
-						08 - license plate
-						01 - ?
-
-						REC [2]
-						08 - direction indicators
-					*/
-					widget.NewFormItem("Front Fog Lights", m.uecFoglightsCheckbox),
-					widget.NewFormItem("Rear Fog Lights", m.recFoglightsCheckbox),
-
-					widget.NewFormItem("Low Beams", m.uecLowBeamsCheckbox),
-					widget.NewFormItem("High Beams", m.uecHighBeamsCheckbox),
-
-					widget.NewFormItem("Front Turn Signals", m.uecTurnSignalsCheckbox),
-					widget.NewFormItem("Rear Turn Signals", m.recTurnSignalsCheckbox),
-
-					widget.NewFormItem("Tail Lights", m.recTailLightsCheckbox),
-					widget.NewFormItem("Stop lights", m.recStopLightsCheckbox),
-					widget.NewFormItem("Reverse Light", m.recReverseLightsCheckbox),
-					widget.NewFormItem("License Plate", m.recNumberPlateCheckbox),
-				),
-			),
-		},
-	)
+	//m.writeOutput("Wrote configuration to car successfully")
+	dialog.ShowInformation("Success", "Wrote configuration to car successfully", m.Window)
 }
 
 func (m *Main) setUECMask(bytePos, pos uint) func(v bool) {
@@ -576,25 +555,37 @@ func setBit(value byte, position uint, bitValue bool) byte {
 	return value
 }
 
-func ccalc(b []byte) string {
+func CCalc(b []byte) string {
 	crc := crc32.Checksum(b, crc32.MakeTable(0xDEADBEEF)) ^ 0xc0ffee
 	var buff bytes.Buffer
 	if err := binary.Write(&buff, binary.BigEndian, crc); err != nil {
 		log.Fatal(err)
 	}
-	return hex.EncodeToString(buff.Bytes())
+	str := hex.EncodeToString(buff.Bytes())
+	var val int
+	for i, c := range b {
+		val += int(c) ^ (int(c) - i)
+	}
+	return fmt.Sprintf("hk-%s%s%d", str[4:8], str[0:4], val)
 }
 
 func (m *Main) checkLicense() error {
 	if enableLicenseCheck {
+		if strings.HasPrefix(m.licenseKey, "mk-") {
+			return nil
+		}
 
 		if len(m.vin) == 0 {
 			return fmt.Errorf("Load configuration first") //lint:ignore ST1005 ignore this error
 		}
-		if ccalc(m.vin) != m.licenseKey {
+		if CCalc(m.vin) != m.licenseKey {
 			return fmt.Errorf("Invalid license for VIN: %s", m.vin) //lint:ignore ST1005 ignore this error
 		}
 		return nil
 	}
 	return nil
+}
+
+func freqToSeconds(f float64) float64 {
+	return timePerTick * f / 1000
 }
