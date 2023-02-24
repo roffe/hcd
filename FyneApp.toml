@@ -1,0 +1,8 @@
+Website = "https://hirschmann-koxha.de/"
+
+[Details]
+  Icon = "./window/hk_white.png"
+  Name = "Saab NG9-3 Halogen Check Disabler"
+  ID = "com.hirschmannkoxha.hcd"
+  Version = "0.0.2"
+  Build = 25
