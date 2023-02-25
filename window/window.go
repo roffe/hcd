@@ -25,9 +25,8 @@ import (
 	"github.com/roffe/gocan/adapter"
 	"github.com/roffe/gocan/adapter/j2534"
 	"github.com/roffe/gocan/pkg/gmlan"
+	"golang.org/x/sys/windows/registry"
 )
-
-var enableLicenseCheck = true
 
 //go:embed hk_white.png
 var icon []byte
@@ -39,6 +38,8 @@ type Main struct {
 
 	output     *widget.List
 	outputData binding.StringList
+
+	header *fyne.Container
 
 	dllSelector *widget.Select
 
@@ -117,6 +118,16 @@ func NewMainWindow() *Main {
 				a.Preferences().SetBool("customValues", false)
 			}
 			w.Content().Refresh()
+		},
+	)
+
+	w.Canvas().AddShortcut(
+		&desktop.CustomShortcut{KeyName: fyne.KeyG, Modifier: fyne.KeyModifierControl},
+		func(shortcut fyne.Shortcut) {
+			if val, err := getMachineUUID(); err == nil {
+				m.writeOutput("copied machine UUID to clipboard")
+				w.Clipboard().SetContent(val)
+			}
 		},
 	)
 
@@ -267,12 +278,10 @@ func (m *Main) Layout() fyne.CanvasObject {
 	)
 	m.customValues.Hidden = !m.App.Preferences().Bool("customValues")
 
-	header := container.New(
+	m.header = container.New(
 		layout.NewGridLayout(1),
 		container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, m.licenseInput),
 	)
-
-	header.Hidden = !enableLicenseCheck
 
 	footer := container.NewVBox(
 		container.New(layout.NewGridLayout(2),
@@ -297,7 +306,7 @@ func (m *Main) Layout() fyne.CanvasObject {
 			Horizontal: true,
 			Offset:     0.8,
 			Leading: container.NewBorder(
-				header,
+				m.header,
 				nil,
 				nil,
 				nil,
@@ -569,22 +578,37 @@ func CCalc(b []byte) string {
 }
 
 func (m *Main) checkLicense() error {
-	if enableLicenseCheck {
-		if strings.HasPrefix(m.licenseKey, "mk-") {
+	if len(m.vin) == 0 {
+		return fmt.Errorf("Load configuration first") //lint:ignore ST1005 ignore this error
+	}
+
+	if uuid, err := getMachineUUID(); err == nil {
+		if CCalc([]byte(uuid)) == m.licenseKey {
 			return nil
 		}
+	}
 
-		if len(m.vin) == 0 {
-			return fmt.Errorf("Load configuration first") //lint:ignore ST1005 ignore this error
-		}
-		if CCalc(m.vin) != m.licenseKey {
-			return fmt.Errorf("Invalid license for VIN: %s", m.vin) //lint:ignore ST1005 ignore this error
-		}
-		return nil
+	if CCalc(m.vin) != m.licenseKey {
+		return fmt.Errorf("Invalid license for VIN: %s", m.vin) //lint:ignore ST1005 ignore this error
 	}
 	return nil
+
 }
 
 func freqToSeconds(f float64) float64 {
 	return timePerTick * f / 1000
+}
+
+func getMachineUUID() (string, error) {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Cryptography`, registry.QUERY_VALUE|registry.WOW64_64KEY)
+	if err != nil {
+		return "", err
+	}
+	defer k.Close()
+
+	uuid, _, err := k.GetStringValue("MachineGuid")
+	if err != nil {
+		return "", err
+	}
+	return uuid, nil
 }

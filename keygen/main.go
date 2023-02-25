@@ -12,8 +12,8 @@ import (
 
 func main() {
 	a := app.NewWithID("com.hcd.keygen")
-	w := a.NewWindow("HCD kEyGen v0.1")
-	w.Resize(fyne.NewSize(400, 50))
+	w := a.NewWindow("HCD kEyGen v0.1337")
+	w.Resize(fyne.NewSize(500, 50))
 	a.Settings().SetTheme(theme.DefaultTheme())
 
 	vinInput := widget.NewEntry()
@@ -28,7 +28,7 @@ func main() {
 	window := container.NewVBox(
 		container.New(
 			layout.NewGridLayout(1),
-			container.NewBorder(nil, nil, widget.NewLabel("VIN:"), generateButton, vinInput),
+			container.NewBorder(nil, nil, widget.NewLabel("VIN/UUID:"), generateButton, vinInput),
 		),
 		container.New(
 			layout.NewGridLayout(1),
