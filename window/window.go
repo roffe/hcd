@@ -90,8 +90,8 @@ const (
 func NewMainWindow() *Main {
 	a := app.NewWithID("com.hirschmannkoxha.hcd")
 	a.Settings().SetTheme(theme.DefaultTheme())
+	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
 
-	w := a.NewWindow("Saab NG9-3 Halogen Check Disabler")
 	w.SetIcon(iconRes)
 	w.Resize(fyne.NewSize(850, 450))
 
@@ -154,8 +154,10 @@ func NewMainWindow() *Main {
 	m.licenseInput = &widget.Entry{
 		PlaceHolder: "Enter license key",
 		OnChanged: func(s string) {
-			m.licenseKey = s
-			m.App.Preferences().SetString("licenseKey", s)
+			trimmed := strings.TrimSpace(s)
+			m.licenseKey = trimmed
+			m.App.Preferences().SetString("licenseKey", trimmed)
+			m.licenseInput.SetText(trimmed)
 		},
 		Password: true,
 	}
@@ -586,6 +588,8 @@ func (m *Main) checkLicense() error {
 		if CCalc([]byte(uuid)) == m.licenseKey {
 			return nil
 		}
+	} else {
+		m.writeOutput("Could not read machine UUID: " + err.Error())
 	}
 
 	if CCalc(m.vin) != m.licenseKey {
