@@ -87,7 +87,7 @@ const (
 )
 
 func NewMainWindow() *Main {
-	a := app.NewWithID("com.trionictuning.hcd")
+	a := app.NewWithID("com.hirschmannkoxha.hcd")
 	a.Settings().SetTheme(theme.DefaultTheme())
 
 	w := a.NewWindow("Saab NG9-3 Halogen Check Disabler")
@@ -327,7 +327,7 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 		return nil, fmt.Errorf("No adapter selected") //lint:ignore ST1005 ignore this error
 	}
 	dev, err := adapter.New(
-		"j2534",
+		"J2534",
 		&gocan.AdapterConfig{
 			Port:         m.selectedDLL,
 			PortBaudrate: 0,
@@ -357,7 +357,6 @@ func (m *Main) enableButtons() {
 
 func (m *Main) writeOutput(s string) {
 	m.outputData.Append(s)
-	m.output.Refresh()
 	m.output.ScrollToBottom()
 }
 
