@@ -44,6 +44,7 @@ type Main struct {
 	dllSelector *widget.Select
 
 	getBtn *widget.Button
+	vinBtn *widget.Button
 	setBtn *widget.Button
 
 	licenseInput *widget.Entry
@@ -93,7 +94,7 @@ func NewMainWindow() *Main {
 	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
 
 	w.SetIcon(iconRes)
-	w.Resize(fyne.NewSize(850, 450))
+	w.Resize(fyne.NewSize(850, 500))
 
 	m := &Main{
 		App:               a,
@@ -256,17 +257,43 @@ func NewMainWindow() *Main {
 		m.dllSelector.SetSelected(selected)
 	}
 
-	m.setBtn = widget.NewButton("Save configuration", m.setState)
-	m.setBtn.Icon = theme.DocumentSaveIcon()
-	m.getBtn = widget.NewButton("Load configuration", func() {
-		if err := m.getStates(); err != nil {
-			m.writeOutput(err.Error())
-		}
-	})
-	m.getBtn.Icon = theme.DownloadIcon()
+	m.setBtn = &widget.Button{
+		Text:     "Save configuration",
+		OnTapped: m.setStates,
+		Icon:     theme.DocumentSaveIcon(),
+	}
+
+	m.vinBtn = &widget.Button{
+		Text:     "Read VIN",
+		OnTapped: m.displayVin,
+		Icon:     theme.SearchIcon(),
+	}
+
+	m.getBtn = &widget.Button{
+		Text:     "Load configuration",
+		OnTapped: m.getStates,
+		Icon:     theme.DownloadIcon(),
+	}
 
 	w.SetContent(m.Layout())
 	return m
+}
+
+func (m *Main) displayVin() {
+	c, err := m.initCAN()
+	if err != nil {
+		m.writeOutput(err.Error())
+		return
+	}
+	defer c.Close()
+
+	if err := m.getVIN(gmlan.New(c, 0x24F, 0x64f), false); err != nil {
+		m.writeOutput(err.Error())
+		return
+	}
+
+	dialog.ShowInformation("VIN", fmt.Sprintf("VIN: %s copied to the Clipboard", m.vin), m.Window)
+	m.Window.Clipboard().SetContent(string(m.vin))
 }
 
 func (m *Main) Layout() fyne.CanvasObject {
@@ -296,7 +323,7 @@ func (m *Main) Layout() fyne.CanvasObject {
 			),
 		),
 		m.customValues,
-		container.New(layout.NewGridLayout(2), m.getBtn, m.setBtn),
+		container.New(layout.NewGridLayout(3), m.getBtn, m.vinBtn, m.setBtn),
 	)
 
 	return container.NewBorder(
@@ -357,12 +384,14 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 
 func (m *Main) disableButtons() {
 	m.getBtn.Disable()
+	m.vinBtn.Disable()
 	m.setBtn.Disable()
 
 }
 
 func (m *Main) enableButtons() {
 	m.getBtn.Enable()
+	m.vinBtn.Enable()
 	m.setBtn.Enable()
 }
 
@@ -371,37 +400,41 @@ func (m *Main) writeOutput(s string) {
 	m.output.ScrollToBottom()
 }
 
-func (m *Main) getVIN(gm *gmlan.Client) error {
+func (m *Main) getVIN(gm *gmlan.Client, checkLicense bool) error {
 	var err error
 	m.vin, err = gm.ReadDataByIdentifier(context.TODO(), 0x90)
 	if err != nil {
 		return err
 	}
+	if !checkLicense {
+		return nil
+	}
 	return m.checkLicense()
 }
 
-func (m *Main) getStates() error {
+func (m *Main) getStates() {
 	m.disableButtons()
 	defer m.enableButtons()
 
 	c, err := m.initCAN()
 	if err != nil {
-		return err
+		m.writeOutput(err.Error())
+		return
 	}
 	defer c.Close()
 
 	// UEC
 	uec := gmlan.New(c, 0x24F, 0x64f)
 
-	if err := m.getVIN(uec); err != nil {
-		return err
+	if err := m.getVIN(uec, true); err != nil {
+		m.writeOutput(err.Error())
+		return
 	}
-
-	//m.writeOutput(fmt.Sprintf("VIN: %s", vin))
 
 	uecBytes, err := uec.ReadDataByIdentifier(context.TODO(), 0x4D)
 	if err != nil {
-		return err
+		m.writeOutput(err.Error())
+		return
 	}
 	m.setInternalUECState(uecBytes)
 
@@ -409,11 +442,11 @@ func (m *Main) getStates() error {
 	rec := gmlan.New(c, 0x249, 0x649)
 	recBytes, err := rec.ReadDataByIdentifier(context.TODO(), 0x45)
 	if err != nil {
-		return err
+		m.writeOutput(err.Error())
+		return
 	}
 	m.setInternalRECState(recBytes)
 	m.writeOutput("Read configuration from car successfully")
-	return nil
 }
 
 func (m *Main) setInternalUECState(data []byte) {
@@ -490,7 +523,7 @@ func (m *Main) setInternalRECState(data []byte) {
 	m.recInput.SetText(strings.ToUpper(hex.EncodeToString(m.rb)))
 }
 
-func (m *Main) setState() {
+func (m *Main) setStates() {
 	m.disableButtons()
 	defer m.enableButtons()
 
@@ -504,7 +537,7 @@ func (m *Main) setState() {
 	// UEC
 	uec := gmlan.New(c, 0x24F, 0x64f)
 
-	if err := m.getVIN(uec); err != nil {
+	if err := m.getVIN(uec, true); err != nil {
 		m.writeOutput(err.Error())
 		return
 	}
