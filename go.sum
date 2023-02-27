@@ -280,6 +280,8 @@ github.com/roffe/gocan v0.0.0-20230225121605-8e9d7645d815 h1:rjQfkop5FT7LcgorkHg
 github.com/roffe/gocan v0.0.0-20230225121605-8e9d7645d815/go.mod h1:1SZRHPTZmR0WZzV8A/f0XzrosSgheprR0f4H4YK7Jag=
 github.com/roffe/gocan v0.0.0-20230226041147-bff96ef4ef48 h1:AZgNwKDKcwj2Ri83DTchN5HeE76ZqsD5Oiq5/TvdrLA=
 github.com/roffe/gocan v0.0.0-20230226041147-bff96ef4ef48/go.mod h1:6WQHa5OhpQTV8Ocnf88ytOdv2s1NyZY5fxDvDMGLs58=
+github.com/roffe/gocan v0.0.0-20230227211742-22afdc991a21 h1:PXLauDHZ7adKYFIYatvDY8dJPb7+ukyYmsOYi44Bwsk=
+github.com/roffe/gocan v0.0.0-20230227211742-22afdc991a21/go.mod h1:6WQHa5OhpQTV8Ocnf88ytOdv2s1NyZY5fxDvDMGLs58=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
