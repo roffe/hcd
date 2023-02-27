@@ -307,10 +307,7 @@ func (m *Main) Layout() fyne.CanvasObject {
 	)
 	m.customValues.Hidden = !m.App.Preferences().Bool("customValues")
 
-	m.header = container.New(
-		layout.NewGridLayout(1),
-		container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, m.licenseInput),
-	)
+	m.header = container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, m.licenseInput)
 
 	footer := container.NewVBox(
 		container.New(layout.NewGridLayout(2),

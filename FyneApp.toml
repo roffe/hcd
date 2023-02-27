@@ -5,4 +5,4 @@ Website = "https://hirschmann-koxha.de/"
   Name = "Saab NG9-3 Halogen Check Disabler"
   ID = "com.hirschmannkoxha.hcd"
   Version = "1.0.1"
-  Build = "1"
+  Build = 8
