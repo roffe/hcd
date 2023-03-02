@@ -8,7 +8,7 @@ require (
 	github.com/albenik/bcd v0.0.0-20170831201648-635201416bc7 // indirect
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/creack/goselect v0.1.2 // indirect
-	go.bug.st/serial v1.5.0 // indirect
+	go.bug.st/serial v1.5.0
 	golang.org/x/sync v0.1.0 // indirect
 )
 
@@ -32,7 +32,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/roffe/gocan v0.0.0-20230227211742-22afdc991a21
+	github.com/roffe/gocan v0.0.0-20230302223221-983343be4695
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
