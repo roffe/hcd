@@ -30,8 +30,11 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 			PortBaudrate: 2000000,
 			CANRate:      33.3,
 			CANFilter:    []uint32{0x64f, 0x649},
-			Output: func(s string) {
+			OutputFunc: func(s string) {
 				m.writeOutput(s)
+			},
+			ErrorFunc: func(err error) {
+				m.writeOutput("error: " + err.Error())
 			},
 		},
 	)
