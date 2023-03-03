@@ -233,6 +233,7 @@ func NewMainWindow() *Main {
 
 	m.j2534List = j2534.FindDLLs()
 	adapters := []string{"OBDLink MX"}
+
 	for _, p := range m.j2534List {
 		adapters = append(adapters, p.Name)
 	}
@@ -268,15 +269,14 @@ func NewMainWindow() *Main {
 
 	if selected := m.App.Preferences().String(prefsSelectedAdapterKey); selected != "" {
 		if selected == "OBDLink MX" {
+			if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
+				m.portSelector.SetSelected(selectedPort)
+			}
 			m.portSelector.Show()
 		} else {
 			m.portSelector.Hide()
 		}
 		m.adapterSelector.SetSelected(selected)
-	}
-
-	if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
-		m.portSelector.SetSelected(selectedPort)
 	}
 
 	m.setBtn = &widget.Button{
