@@ -19,7 +19,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/roffe/gocan/adapter/j2534"
+	"github.com/roffe/gocan/adapter/passthru"
 	"github.com/roffe/gocan/pkg/gmlan"
 	"golang.org/x/sys/windows/registry"
 )
@@ -55,7 +55,7 @@ type Main struct {
 	calculatedUECFreq *widget.Label
 	calculatedRECFreq *widget.Label
 
-	j2534List []j2534.J2534DLL
+	j2534List []passthru.J2534DLL
 	portName  string
 
 	uecFoglightsCheckbox   *widget.Check
@@ -231,7 +231,7 @@ func NewMainWindow() *Main {
 		}
 	}
 
-	m.j2534List = j2534.FindDLLs()
+	m.j2534List = passthru.FindDLLs()
 	adapters := []string{"OBDLink MX"}
 
 	for _, p := range m.j2534List {
