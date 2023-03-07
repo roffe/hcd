@@ -4,7 +4,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/hirschmann-koxha-gbr/hcd/window"
@@ -15,27 +14,24 @@ func main() {
 	w := a.NewWindow("HCD kEyGen v0.1337")
 	w.Resize(fyne.NewSize(500, 50))
 	a.Settings().SetTheme(theme.DefaultTheme())
-
 	vinInput := widget.NewEntry()
-	result := widget.NewLabel("")
-
-	generateButton := widget.NewButton("Generate", func() {
-		res := window.CCalc([]byte(vinInput.Text))
-		result.SetText(res)
-		w.Clipboard().SetContent(res)
-	})
-
-	window := container.NewVBox(
-		container.New(
-			layout.NewGridLayout(1),
-			container.NewBorder(nil, nil, widget.NewLabel("VIN/UUID:"), generateButton, vinInput),
+	result := widget.NewEntry()
+	w.SetContent(container.NewVBox(
+		container.NewBorder(
+			nil,
+			nil,
+			widget.NewLabel("VIN/UUID:"), widget.NewButton("Generate", func() {
+				result.SetText(window.CCalc([]byte(vinInput.Text)))
+			}),
+			vinInput,
 		),
-		container.New(
-			layout.NewGridLayout(1),
-			container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, result),
+		container.NewBorder(
+			nil,
+			nil,
+			widget.NewLabel("License:"),
+			nil,
+			result,
 		),
-	)
-
-	w.SetContent(window)
+	))
 	w.ShowAndRun()
 }
