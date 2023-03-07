@@ -32,7 +32,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/roffe/gocan v0.0.0-20230305235357-162d698a4889
+	github.com/roffe/gocan v0.0.0-20230307114709-4117e819085d
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
@@ -47,4 +47,4 @@ require (
 	honnef.co/go/js/dom v0.0.0-20221001195520-26252dedbe70 // indirect
 )
 
-// replace github.com/roffe/gocan => C:\Users\flejd\go\src\github.com\roffe\gocan
+replace github.com/roffe/gocan => C:\Users\flejd\go\src\github.com\roffe\gocan
