@@ -1,13 +1,9 @@
 package window
 
 import (
-	"bytes"
 	_ "embed"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"hash/crc32"
-	"log"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -21,7 +17,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/roffe/gocan/adapter/passthru"
 	"github.com/roffe/gocan/pkg/gmlan"
-	"golang.org/x/sys/windows/registry"
 )
 
 //go:embed hk_white.png
@@ -72,10 +67,8 @@ type Main struct {
 
 	customValues *fyne.Container
 
-	ub []byte
-	rb []byte
-
-	licenseKey string
+	uecBytes []byte
+	recBytes []byte
 
 	vin []byte
 }
@@ -92,7 +85,8 @@ func NewMainWindow() *Main {
 	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
 
 	w.SetIcon(iconRes)
-	w.Resize(fyne.NewSize(850, 500))
+	w.Resize(fyne.NewSize(850, 585))
+	w.SetFixedSize(true)
 
 	m := &Main{
 		App:               a,
@@ -154,7 +148,6 @@ func NewMainWindow() *Main {
 		PlaceHolder: "Enter license key",
 		OnChanged: func(s string) {
 			trimmed := strings.TrimSpace(s)
-			m.licenseKey = trimmed
 			m.App.Preferences().SetString("licenseKey", trimmed)
 			m.licenseInput.SetText(trimmed)
 		},
@@ -180,8 +173,8 @@ func NewMainWindow() *Main {
 			m.writeOutput(err.Error())
 			return
 		}
-		if len(m.ub) > 0 {
-			m.ub[0] = byte(f)
+		if len(m.uecBytes) > 0 {
+			m.uecBytes[0] = byte(f)
 		}
 		if freq := freqToSeconds(f); freq > 0 {
 			m.calculatedUECFreq.SetText(fmt.Sprintf("%.02fs", freq))
@@ -189,7 +182,7 @@ func NewMainWindow() *Main {
 			m.calculatedUECFreq.SetText("OFF")
 		}
 
-		m.uecInput.SetText(strings.ToUpper(hex.EncodeToString(m.ub)))
+		m.uecInput.SetText(strings.ToUpper(hex.EncodeToString(m.uecBytes)))
 	}))
 
 	m.recCheckFreq.AddListener(binding.NewDataListener(func() {
@@ -198,15 +191,15 @@ func NewMainWindow() *Main {
 			m.writeOutput(err.Error())
 			return
 		}
-		if len(m.rb) > 0 {
-			m.rb[0] = byte(f)
+		if len(m.recBytes) > 0 {
+			m.recBytes[0] = byte(f)
 		}
 		if freq := freqToSeconds(f); freq > 0 {
 			m.calculatedRECFreq.SetText(fmt.Sprintf("%.02fs", freq))
 		} else {
 			m.calculatedRECFreq.SetText("OFF")
 		}
-		m.recInput.SetText(strings.ToUpper(hex.EncodeToString(m.rb)))
+		m.recInput.SetText(strings.ToUpper(hex.EncodeToString(m.recBytes)))
 	}))
 
 	m.uecInput.OnChanged = func(s string) {
@@ -399,51 +392,22 @@ func (m *Main) writeOutput(s string) {
 
 func (m *Main) setUECMask(bytePos, pos uint) func(v bool) {
 	return func(v bool) {
-		if len(m.ub) < 2 {
+		if len(m.uecBytes) < 2 {
 			return
 		}
-		m.ub[bytePos] = setBit(m.ub[bytePos], pos, v)
-		m.uecInput.SetText(strings.ToUpper(hex.EncodeToString(m.ub)))
+		m.uecBytes[bytePos] = setBit(m.uecBytes[bytePos], pos, v)
+		m.uecInput.SetText(strings.ToUpper(hex.EncodeToString(m.uecBytes)))
 	}
 }
 
 func (m *Main) setRECMask(bytePos, pos uint) func(v bool) {
 	return func(v bool) {
-		if len(m.rb) < 2 {
+		if len(m.recBytes) < 2 {
 			return
 		}
-		m.rb[bytePos] = setBit(m.rb[bytePos], pos, v)
-		m.recInput.SetText(strings.ToUpper(hex.EncodeToString(m.rb)))
+		m.recBytes[bytePos] = setBit(m.recBytes[bytePos], pos, v)
+		m.recInput.SetText(strings.ToUpper(hex.EncodeToString(m.recBytes)))
 	}
-}
-
-func setBit(value byte, position uint, bitValue bool) byte {
-	if position > 7 {
-		panic("position must be between 0 and 7")
-	}
-	// Shift 1 to the left by the position to create a mask
-	var mask byte = 1 << position
-	// Set the bit at the given position to 1 or 0
-	if bitValue {
-		value |= mask // Set bit to 1
-	} else {
-		value &= ^mask // Set bit to 0
-	}
-	return value
-}
-
-func CCalc(b []byte) string {
-	crc := crc32.Checksum(b, crc32.MakeTable(0xDEADBEEF)) ^ 0xc0ffee
-	var buff bytes.Buffer
-	if err := binary.Write(&buff, binary.BigEndian, crc); err != nil {
-		log.Fatal(err)
-	}
-	str := hex.EncodeToString(buff.Bytes())
-	var val int
-	for i, c := range b {
-		val += int(c) ^ (int(c) - i)
-	}
-	return fmt.Sprintf("hk-%s%s%d", str[4:8], str[0:4], val)
 }
 
 func (m *Main) checkLicense() error {
@@ -451,35 +415,17 @@ func (m *Main) checkLicense() error {
 		return fmt.Errorf("Load configuration first") //lint:ignore ST1005 ignore this error
 	}
 
+	licenseKey := m.App.Preferences().String("licenseKey")
+
 	if uuid, err := getMachineUUID(); err == nil {
-		if CCalc([]byte(uuid)) == m.licenseKey {
+		if CCalc([]byte(uuid)) == licenseKey {
 			return nil
 		}
-	} else {
-		m.writeOutput("Could not read machine UUID: " + err.Error())
 	}
 
-	if CCalc(m.vin) != m.licenseKey {
+	if CCalc(m.vin) != licenseKey {
 		return fmt.Errorf("Invalid license for VIN: %s", m.vin) //lint:ignore ST1005 ignore this error
 	}
 	return nil
 
-}
-
-func freqToSeconds(f float64) float64 {
-	return timePerTick * f / 1000
-}
-
-func getMachineUUID() (string, error) {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Cryptography`, registry.QUERY_VALUE|registry.WOW64_64KEY)
-	if err != nil {
-		return "", err
-	}
-	defer k.Close()
-
-	uuid, _, err := k.GetStringValue("MachineGuid")
-	if err != nil {
-		return "", err
-	}
-	return uuid, nil
 }

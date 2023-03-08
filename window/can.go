@@ -97,7 +97,7 @@ func (m *Main) setInternalUECState(data []byte) {
 	if len(data) < 4 {
 		return
 	}
-	m.ub = data
+	m.uecBytes = data
 	if data[1]&0x40 == 0x40 {
 		m.uecFoglightsCheckbox.SetChecked(true)
 	} else {
@@ -121,15 +121,15 @@ func (m *Main) setInternalUECState(data []byte) {
 	if err := m.uecCheckFreq.Set(float64(data[0])); err != nil {
 		m.writeOutput(err.Error())
 	}
-	m.uecInput.SetText(strings.ToUpper(hex.EncodeToString(m.ub)))
+	m.uecInput.SetText(strings.ToUpper(hex.EncodeToString(m.uecBytes)))
 }
 
 func (m *Main) setInternalRECState(data []byte) {
 	if len(data) != 6 {
 		return
 	}
-	m.rb = data
-	if err := m.recCheckFreq.Set(float64(m.rb[0])); err != nil {
+	m.recBytes = data
+	if err := m.recCheckFreq.Set(float64(m.recBytes[0])); err != nil {
 		m.writeOutput(err.Error())
 	}
 	if data[1]&0x80 == 0x80 {
@@ -164,7 +164,7 @@ func (m *Main) setInternalRECState(data []byte) {
 		m.recTurnSignalsCheckbox.SetChecked(false)
 	}
 
-	m.recInput.SetText(strings.ToUpper(hex.EncodeToString(m.rb)))
+	m.recInput.SetText(strings.ToUpper(hex.EncodeToString(m.recBytes)))
 }
 
 func (m *Main) setStates() {
@@ -186,19 +186,19 @@ func (m *Main) setStates() {
 		return
 	}
 
-	if len(m.ub) < 4 || len(m.rb) != 6 {
+	if len(m.uecBytes) < 4 || len(m.recBytes) != 6 || len(m.vin) == 0 {
 		dialog.ShowError(errors.New("Load car configuration first"), m.Window) //lint:ignore ST1005 ignore this
 		return
 	}
 
-	if err := uec.WriteDataByIdentifier(context.TODO(), 0x4D, m.ub); err != nil {
+	if err := uec.WriteDataByIdentifier(context.TODO(), 0x4D, m.uecBytes); err != nil {
 		m.outputData.Append("UEC: " + err.Error())
 		return
 	}
 
 	// REC
 	rec := gmlan.New(c, 0x249, 0x649)
-	if err := rec.WriteDataByIdentifier(context.TODO(), 0x45, m.rb); err != nil {
+	if err := rec.WriteDataByIdentifier(context.TODO(), 0x45, m.recBytes); err != nil {
 		m.outputData.Append("REC: " + err.Error())
 		return
 	}
