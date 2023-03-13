@@ -19,7 +19,7 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 	}
 
 	adapterName := m.adapterSelector.Selected
-	if adapterName != "OBDLink MX" {
+	if !strings.HasPrefix(adapterName, "STN") {
 		adapterName = "J2534"
 	}
 

@@ -227,7 +227,7 @@ func NewMainWindow() *Main {
 	}
 
 	m.j2534List = passthru.FindDLLs()
-	adapters := []string{"OBDLink MX"}
+	adapters := []string{"STN1170", "STN2120"}
 
 	for _, p := range m.j2534List {
 		adapters = append(adapters, p.Name)
@@ -246,9 +246,10 @@ func NewMainWindow() *Main {
 		Alignment: fyne.TextAlignCenter,
 		Options:   adapters,
 		OnChanged: func(s string) {
-			if s == "OBDLink MX" {
+			if strings.HasPrefix(s, "STN") {
 				m.portSelector.Show()
 				m.App.Preferences().SetString(prefsSelectedAdapterKey, s)
+				m.portName = m.portSelector.Selected
 			} else {
 				m.portSelector.Hide()
 				for _, p := range m.j2534List {
@@ -263,7 +264,7 @@ func NewMainWindow() *Main {
 	}
 
 	if selected := m.App.Preferences().String(prefsSelectedAdapterKey); selected != "" {
-		if selected == "OBDLink MX" {
+		if strings.HasPrefix(selected, "STN") {
 			if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
 				m.portSelector.SetSelected(selectedPort)
 			}
