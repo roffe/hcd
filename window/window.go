@@ -117,9 +117,11 @@ func NewMainWindow() *Main {
 	w.Canvas().AddShortcut(
 		&desktop.CustomShortcut{KeyName: fyne.KeyG, Modifier: fyne.KeyModifierControl},
 		func(shortcut fyne.Shortcut) {
-			if val, err := getMachineUUID(); err == nil {
+			if val, err := GetMachineUUID(); err == nil {
 				m.writeOutput("copied machine UUID to clipboard")
 				w.Clipboard().SetContent(val)
+			} else {
+				m.writeOutput("Error loading uuid: " + err.Error())
 			}
 		},
 	)
@@ -417,7 +419,7 @@ func (m *Main) checkLicense() error {
 
 	licenseKey := m.App.Preferences().String("licenseKey")
 
-	if uuid, err := getMachineUUID(); err == nil {
+	if uuid, err := GetMachineUUID(); err == nil {
 		if CCalc([]byte(uuid)) == licenseKey {
 			return nil
 		}

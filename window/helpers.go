@@ -44,7 +44,7 @@ func freqToSeconds(f float64) float64 {
 	return timePerTick * f / 1000
 }
 
-func getMachineUUID() (string, error) {
+func GetMachineUUID() (string, error) {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Cryptography`, registry.QUERY_VALUE|registry.WOW64_64KEY)
 	if err != nil {
 		return "", err

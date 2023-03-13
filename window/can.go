@@ -23,25 +23,25 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 		adapterName = "J2534"
 	}
 
-	dev, err := adapter.New(
+	device, err := adapter.New(
 		adapterName,
 		&gocan.AdapterConfig{
 			Port:         m.portName,
 			PortBaudrate: 2000000,
 			CANRate:      33.3,
-			CANFilter:    []uint32{0x64f, 0x649},
+			CANFilter:    []uint32{0x64F, 0x649},
 			OutputFunc: func(s string) {
 				m.writeOutput(s)
 			},
 			ErrorFunc: func(err error) {
-				m.writeOutput("error: " + err.Error())
+				m.writeOutput("err: " + err.Error())
 			},
 		},
 	)
 	if err != nil {
 		return nil, err
 	}
-	return gocan.New(context.Background(), dev)
+	return gocan.New(context.Background(), device)
 }
 
 func (m *Main) getVIN(gm *gmlan.Client, checkLicense bool) error {
