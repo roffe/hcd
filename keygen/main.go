@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -21,6 +23,9 @@ func main() {
 			nil,
 			nil,
 			widget.NewLabel("VIN/UUID:"), widget.NewButton("Generate", func() {
+				if strings.HasPrefix(vinInput.Text, "ys") {
+					vinInput.SetText(strings.ToUpper(vinInput.Text))
+				}
 				result.SetText(window.CCalc([]byte(vinInput.Text)))
 			}),
 			vinInput,
