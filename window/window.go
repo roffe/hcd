@@ -57,10 +57,11 @@ type Main struct {
 	j2534List []passthru.J2534DLL
 	portName  string
 
-	uecFoglightsCheckbox   *widget.Check
-	uecLowBeamsCheckbox    *widget.Check
-	uecHighBeamsCheckbox   *widget.Check
-	uecTurnSignalsCheckbox *widget.Check
+	uecParkingLightsCheckbox *widget.Check
+	uecFoglightsCheckbox     *widget.Check
+	uecLowBeamsCheckbox      *widget.Check
+	uecHighBeamsCheckbox     *widget.Check
+	uecTurnSignalsCheckbox   *widget.Check
 
 	recFoglightsCheckbox     *widget.Check
 	recTailLightsCheckbox    *widget.Check
@@ -89,7 +90,7 @@ func NewMainWindow() *Main {
 	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
 
 	w.SetIcon(iconRes)
-	w.Resize(fyne.NewSize(850, 685))
+	w.Resize(fyne.NewSize(850, 605))
 	w.SetFixedSize(true)
 
 	w.SetMaster()
@@ -163,6 +164,7 @@ func NewMainWindow() *Main {
 	}
 	m.licenseInput.SetText(m.App.Preferences().StringWithFallback("licenseKey", ""))
 
+	m.uecParkingLightsCheckbox = widget.NewCheck("", m.setUECMask(1, 7))
 	m.uecFoglightsCheckbox = widget.NewCheck("", m.setUECMask(1, 6))
 	m.uecLowBeamsCheckbox = widget.NewCheck("", m.setUECMask(1, 5))
 	m.uecHighBeamsCheckbox = widget.NewCheck("", m.setUECMask(1, 4))
@@ -233,7 +235,7 @@ func NewMainWindow() *Main {
 	}
 
 	m.j2534List = passthru.FindDLLs()
-	adapters := []string{"STN1170", "STN2120"}
+	adapters := []string{"STN1170", "STN2120", "CANUSB"}
 
 	for _, p := range m.j2534List {
 		adapters = append(adapters, p.Name)
@@ -290,7 +292,7 @@ func NewMainWindow() *Main {
 		Alignment: fyne.TextAlignCenter,
 		Options:   adapters,
 		OnChanged: func(s string) {
-			if strings.HasPrefix(s, "STN") {
+			if strings.HasPrefix(s, "STN") || s == "CANUSB" {
 				m.portSelector.Show()
 				m.tech2PortSelector.Hide()
 				m.App.Preferences().SetString(prefsSelectedAdapterKey, s)
@@ -315,7 +317,7 @@ func NewMainWindow() *Main {
 	}
 
 	if selected := m.App.Preferences().String(prefsSelectedAdapterKey); selected != "" {
-		if strings.HasPrefix(selected, "STN") {
+		if strings.HasPrefix(selected, "STN") || selected == "CANUSB" {
 			if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
 				m.portSelector.SetSelected(selectedPort)
 			}
@@ -431,11 +433,11 @@ func (m *Main) Layout() fyne.CanvasObject {
 	footer := container.NewVBox(
 		container.New(layout.NewGridLayout(2),
 			container.NewMax(
-				container.NewBorder(nil, nil, widget.NewLabel("UEC check interval:"), m.calculatedUECFreq, widget.NewSliderWithData(0, 255, m.uecCheckFreq)),
+				container.NewBorder(nil, nil, widget.NewLabel("UEC PWM:"), m.calculatedUECFreq, widget.NewSliderWithData(0, 255, m.uecCheckFreq)),
 				widget.NewLabel(""),
 			),
 			container.NewMax(
-				container.NewBorder(nil, nil, widget.NewLabel("REC check interval:"), m.calculatedRECFreq, widget.NewSliderWithData(0, 255, m.recCheckFreq)),
+				container.NewBorder(nil, nil, widget.NewLabel("REC PWM:"), m.calculatedRECFreq, widget.NewSliderWithData(0, 255, m.recCheckFreq)),
 			),
 		),
 		m.customValues,
@@ -463,6 +465,7 @@ func (m *Main) Layout() fyne.CanvasObject {
 				m.portSelector,
 				m.tech2PortSelector,
 				widget.NewForm(
+					widget.NewFormItem("Front Parking Lights", m.uecParkingLightsCheckbox),
 					widget.NewFormItem("Front Fog Lights", m.uecFoglightsCheckbox),
 					widget.NewFormItem("Rear Fog Lights", m.recFoglightsCheckbox),
 					widget.NewFormItem("Low Beams", m.uecLowBeamsCheckbox),

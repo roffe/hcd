@@ -19,7 +19,7 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 	}
 
 	adapterName := m.adapterSelector.Selected
-	if !strings.HasPrefix(adapterName, "STN") {
+	if !strings.HasPrefix(adapterName, "STN") && adapterName != "CANUSB" {
 		adapterName = "J2534"
 	}
 
@@ -70,6 +70,10 @@ func (m *Main) getStates() {
 	// UEC
 	uec := gmlan.New(c, 0x24F, 0x64f)
 
+	if err := uec.TesterPresentNoResponseAllowed(); err != nil {
+		m.writeOutput("TPNRA: " + err.Error())
+	}
+
 	if err := m.getVIN(uec, true); err != nil {
 		m.writeOutput(err.Error())
 		return
@@ -98,6 +102,11 @@ func (m *Main) setInternalUECState(data []byte) {
 		return
 	}
 	m.uecBytes = data
+	if data[1]&0x80 == 0x80 {
+		m.uecParkingLightsCheckbox.SetChecked(true)
+	} else {
+		m.uecParkingLightsCheckbox.SetChecked(false)
+	}
 	if data[1]&0x40 == 0x40 {
 		m.uecFoglightsCheckbox.SetChecked(true)
 	} else {
@@ -180,6 +189,10 @@ func (m *Main) setStates() {
 
 	// UEC
 	uec := gmlan.New(c, 0x24F, 0x64f)
+
+	if err := uec.TesterPresentNoResponseAllowed(); err != nil {
+		m.writeOutput("TPNRA: " + err.Error())
+	}
 
 	if err := m.getVIN(uec, true); err != nil {
 		m.writeOutput(err.Error())
