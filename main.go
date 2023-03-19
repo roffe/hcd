@@ -12,6 +12,5 @@ func init() {
 }
 
 func main() {
-	mw := window.NewMainWindow()
-	mw.Window.ShowAndRun()
+	window.NewMainWindow().Window.ShowAndRun()
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"fyne.io/fyne/v2/dialog"
@@ -30,10 +31,10 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 			PortBaudrate: 2000000,
 			CANRate:      33.3,
 			CANFilter:    []uint32{0x64F, 0x649},
-			OutputFunc: func(s string) {
+			OnMessage: func(s string) {
 				m.writeOutput(s)
 			},
-			ErrorFunc: func(err error) {
+			OnError: func(err error) {
 				m.writeOutput("err: " + err.Error())
 			},
 		},
@@ -68,7 +69,7 @@ func (m *Main) getStates() {
 	defer c.Close()
 
 	// UEC
-	uec := gmlan.New(c, 0x24F, 0x64f)
+	uec := gmlan.New(c, 0x24F, 0x64F)
 
 	if err := uec.TesterPresentNoResponseAllowed(); err != nil {
 		m.writeOutput("TPNRA: " + err.Error())
@@ -78,6 +79,12 @@ func (m *Main) getStates() {
 		m.writeOutput(err.Error())
 		return
 	}
+	uecPWMBytes, err := uec.ReadDataByIdentifier(context.TODO(), 0x40)
+	if err != nil {
+		m.writeOutput(err.Error())
+		return
+	}
+	log.Printf("%X", uecPWMBytes)
 
 	uecBytes, err := uec.ReadDataByIdentifier(context.TODO(), 0x4D)
 	if err != nil {
@@ -200,7 +207,7 @@ func (m *Main) setStates() {
 	}
 
 	if len(m.uecBytes) < 4 || len(m.recBytes) != 6 || len(m.vin) == 0 {
-		dialog.ShowError(errors.New("Load car configuration first"), m.Window) //lint:ignore ST1005 ignore this
+		dialog.ShowError(errors.New("Press \"Load configuration\" first"), m.Window) //lint:ignore ST1005 ignore this
 		return
 	}
 
@@ -215,7 +222,5 @@ func (m *Main) setStates() {
 		m.outputData.Append("REC: " + err.Error())
 		return
 	}
-
-	//m.writeOutput("Wrote configuration to car successfully")
-	dialog.ShowInformation("Success", "Wrote configuration to car successfully", m.Window)
+	m.writeOutput("Wrote configuration to car successfully")
 }
