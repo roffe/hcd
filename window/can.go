@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"fyne.io/fyne/v2/dialog"
@@ -15,17 +14,11 @@ import (
 )
 
 func (m *Main) initCAN() (*gocan.Client, error) {
-	if m.portName == "" {
+	if m.adapterSelector.Selected == "" {
 		return nil, fmt.Errorf("No adapter selected") //lint:ignore ST1005 ignore this error
 	}
-
-	adapterName := m.adapterSelector.Selected
-	if !strings.HasPrefix(adapterName, "STN") && adapterName != "CANUSB" {
-		adapterName = "J2534"
-	}
-
 	device, err := adapter.New(
-		adapterName,
+		m.adapterSelector.Selected,
 		&gocan.AdapterConfig{
 			Port:         m.portName,
 			PortBaudrate: 2000000,
@@ -84,7 +77,8 @@ func (m *Main) getStates() {
 		m.writeOutput(err.Error())
 		return
 	}
-	log.Printf("%X", uecPWMBytes)
+	m.uecPWMBytes = uecPWMBytes
+	m.uecPWM.SetText(hex.EncodeToString(uecPWMBytes))
 
 	uecBytes, err := uec.ReadDataByIdentifier(context.TODO(), 0x4D)
 	if err != nil {
@@ -206,13 +200,18 @@ func (m *Main) setStates() {
 		return
 	}
 
-	if len(m.uecBytes) < 4 || len(m.recBytes) != 6 || len(m.vin) == 0 {
+	if len(m.uecBytes) < 4 || len(m.recBytes) != 6 || len(m.vin) == 0 || len(m.uecPWMBytes) != 2 {
 		dialog.ShowError(errors.New("Press \"Load configuration\" first"), m.Window) //lint:ignore ST1005 ignore this
 		return
 	}
 
 	if err := uec.WriteDataByIdentifier(context.TODO(), 0x4D, m.uecBytes); err != nil {
 		m.outputData.Append("UEC: " + err.Error())
+		return
+	}
+
+	if err := uec.WriteDataByIdentifier(context.TODO(), 0x40, m.uecPWMBytes); err != nil {
+		m.outputData.Append("UEC PWM: " + err.Error())
 		return
 	}
 

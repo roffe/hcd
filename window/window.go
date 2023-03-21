@@ -9,11 +9,9 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/roffe/gocan/adapter/passthru"
@@ -37,6 +35,7 @@ type Main struct {
 
 	adapterSelector   *widget.Select
 	portSelector      *widget.Select
+	portOverride      *widget.Entry
 	tech2PortSelector *widget.Select
 
 	getBtn *widget.Button
@@ -70,10 +69,13 @@ type Main struct {
 	recTurnSignalsCheckbox   *widget.Check
 	recStopLightsCheckbox    *widget.Check
 
+	uecPWM *widget.Entry
+
 	customValues *fyne.Container
 
-	uecBytes []byte
-	recBytes []byte
+	uecPWMBytes []byte
+	uecBytes    []byte
+	recBytes    []byte
 
 	vin []byte
 }
@@ -90,7 +92,7 @@ func NewMainWindow() *Main {
 	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
 
 	w.SetIcon(iconRes)
-	w.Resize(fyne.NewSize(850, 605))
+	w.Resize(fyne.NewSize(850, 705))
 	w.SetFixedSize(true)
 
 	w.SetMaster()
@@ -133,6 +135,19 @@ func NewMainWindow() *Main {
 		},
 	)
 
+	w.Canvas().AddShortcut(
+		&desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierControl},
+		func(shortcut fyne.Shortcut) {
+			if m.portOverride.Visible() {
+				m.portOverride.Hide()
+				m.Window.Content().Refresh()
+			} else {
+				m.portOverride.Show()
+				m.Window.Content().Refresh()
+			}
+		},
+	)
+
 	m.output = widget.NewListWithData(
 		m.outputData,
 		func() fyne.CanvasObject {
@@ -152,6 +167,19 @@ func NewMainWindow() *Main {
 			obj.(*widget.Label).SetText(txt)
 		},
 	)
+
+	m.uecPWM = &widget.Entry{
+		OnChanged: func(s string) {
+			if len(s)%2 == 0 {
+				b, err := hex.DecodeString(s)
+				if err != nil {
+					m.writeOutput("invalid PWM hex value")
+					return
+				}
+				m.uecPWMBytes = b
+			}
+		},
+	}
 
 	m.licenseInput = &widget.Entry{
 		PlaceHolder: "Enter license key",
@@ -411,75 +439,6 @@ func (m *Main) displayVin() {
 	}
 	m.Window.Clipboard().SetContent(string(m.vin))
 	dialog.ShowInformation("VIN", fmt.Sprintf("VIN: %s copied to Clipboard", m.vin), m.Window)
-}
-
-func (m *Main) Layout() fyne.CanvasObject {
-	m.customValues = container.New(layout.NewGridLayout(2),
-		container.NewMax(
-			container.NewBorder(nil, nil, widget.NewLabel("UEC value:"), nil, m.uecInput),
-		),
-		container.NewMax(
-			container.NewBorder(nil, nil, widget.NewLabel("REC value:"), nil, m.recInput),
-		),
-	)
-	m.customValues.Hidden = !m.App.Preferences().Bool("customValues")
-
-	m.header = container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, m.licenseInput)
-
-	//helpBtn := widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
-	//	help.NewWindow(m.App)
-	//})
-
-	footer := container.NewVBox(
-		container.New(layout.NewGridLayout(2),
-			container.NewMax(
-				container.NewBorder(nil, nil, widget.NewLabel("UEC PWM:"), m.calculatedUECFreq, widget.NewSliderWithData(0, 255, m.uecCheckFreq)),
-				widget.NewLabel(""),
-			),
-			container.NewMax(
-				container.NewBorder(nil, nil, widget.NewLabel("REC PWM:"), m.calculatedRECFreq, widget.NewSliderWithData(0, 255, m.recCheckFreq)),
-			),
-		),
-		m.customValues,
-		container.New(layout.NewGridLayout(3), m.getBtn, m.vinBtn, m.setBtn),
-		//container.New(layout.NewGridLayout(4), m.getBtn, m.vinBtn, m.setBtn, helpBtn),
-	)
-
-	return container.NewBorder(
-		nil,
-		footer,
-		nil,
-		nil,
-		&container.Split{
-			Horizontal: true,
-			Offset:     0.8,
-			Leading: container.NewBorder(
-				m.header,
-				nil,
-				nil,
-				nil,
-				m.output,
-			),
-			Trailing: container.NewVBox(
-				m.adapterSelector,
-				m.portSelector,
-				m.tech2PortSelector,
-				widget.NewForm(
-					widget.NewFormItem("Front Parking Lights", m.uecParkingLightsCheckbox),
-					widget.NewFormItem("Front Fog Lights", m.uecFoglightsCheckbox),
-					widget.NewFormItem("Rear Fog Lights", m.recFoglightsCheckbox),
-					widget.NewFormItem("Low Beams", m.uecLowBeamsCheckbox),
-					widget.NewFormItem("High Beams", m.uecHighBeamsCheckbox),
-					widget.NewFormItem("Front Turn Signals", m.uecTurnSignalsCheckbox),
-					widget.NewFormItem("Rear Turn Signals", m.recTurnSignalsCheckbox),
-					widget.NewFormItem("Tail Lights", m.recTailLightsCheckbox),
-					widget.NewFormItem("Stop Lights", m.recStopLightsCheckbox),
-					widget.NewFormItem("Reverse Light", m.recReverseLightsCheckbox),
-					widget.NewFormItem("License Plate", m.recNumberPlateCheckbox),
-				),
-			),
-		},
-	)
 }
 
 func (m *Main) disableButtons() {
