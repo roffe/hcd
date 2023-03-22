@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/roffe/gocan/adapter/passthru"
+	"github.com/roffe/gocan/adapter"
 	"github.com/roffe/gocan/pkg/gmlan"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
@@ -53,8 +54,7 @@ type Main struct {
 	calculatedUECFreq *widget.Label
 	calculatedRECFreq *widget.Label
 
-	j2534List []passthru.J2534DLL
-	portName  string
+	portName string
 
 	uecParkingLightsCheckbox *widget.Check
 	uecFoglightsCheckbox     *widget.Check
@@ -262,12 +262,13 @@ func NewMainWindow() *Main {
 		}
 	}
 
-	m.j2534List = passthru.FindDLLs()
-	adapters := []string{"STN1170", "STN2120", "CANUSB"}
-
-	for _, p := range m.j2534List {
-		adapters = append(adapters, p.Name)
+	var adapters []string
+	for _, p := range adapter.GetAdapterMap() {
+		if p.Capabilities.SWCAN {
+			adapters = append(adapters, p.Name)
+		}
 	}
+	sort.Slice(adapters, func(i, j int) bool { return strings.ToLower(adapters[i]) < strings.ToLower(adapters[j]) })
 
 	m.portSelector = &widget.Select{
 		Alignment: fyne.TextAlignCenter,
@@ -320,45 +321,41 @@ func NewMainWindow() *Main {
 		Alignment: fyne.TextAlignCenter,
 		Options:   adapters,
 		OnChanged: func(s string) {
-			if strings.HasPrefix(s, "STN") || s == "CANUSB" {
-				m.portSelector.Show()
-				m.tech2PortSelector.Hide()
-				m.App.Preferences().SetString(prefsSelectedAdapterKey, s)
-				m.portName = m.portSelector.Selected
-				return
-			}
-			if strings.HasPrefix(strings.ToLower(s), "tech2") {
-				m.tech2PortSelector.Show()
-				m.portSelector.Hide()
-			} else {
-				m.portSelector.Hide()
-				m.tech2PortSelector.Hide()
-			}
-			for _, p := range m.j2534List {
-				if p.Name == s {
-					m.portName = p.FunctionLibrary
-					m.App.Preferences().SetString(prefsSelectedAdapterKey, p.Name)
-					break
+			if adapter, found := adapter.GetAdapterMap()[s]; found {
+				if adapter.RequiresSerialPort {
+					m.portSelector.Show()
+					m.tech2PortSelector.Hide()
+					m.App.Preferences().SetString(prefsSelectedAdapterKey, s)
+					m.portName = m.portSelector.Selected
+					return
+				} else if strings.HasPrefix(strings.ToLower(adapter.Name), "tech2") {
+					m.tech2PortSelector.Show()
+					m.portSelector.Hide()
+				} else {
+					m.portSelector.Hide()
+					m.tech2PortSelector.Hide()
 				}
 			}
 		},
 	}
 
 	if selected := m.App.Preferences().String(prefsSelectedAdapterKey); selected != "" {
-		if strings.HasPrefix(selected, "STN") || selected == "CANUSB" {
-			if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
-				m.portSelector.SetSelected(selectedPort)
+		if adapter, found := adapter.GetAdapterMap()[selected]; found {
+			if adapter.RequiresSerialPort {
+				if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
+					m.portSelector.SetSelected(selectedPort)
+				}
+				m.portSelector.Show()
+				m.tech2PortSelector.Hide()
+			} else if strings.HasPrefix(strings.ToLower(selected), "tech2") {
+				m.tech2PortSelector.Show()
+				m.portSelector.Hide()
+			} else {
+				m.portSelector.Hide()
+				m.tech2PortSelector.Hide()
 			}
-			m.portSelector.Show()
-			m.tech2PortSelector.Hide()
-		} else if strings.HasPrefix(strings.ToLower(selected), "tech2") {
-			m.tech2PortSelector.Show()
-			m.portSelector.Hide()
-		} else {
-			m.portSelector.Hide()
-			m.tech2PortSelector.Hide()
+			m.adapterSelector.SetSelected(selected)
 		}
-		m.adapterSelector.SetSelected(selected)
 	}
 
 	m.setBtn = &widget.Button{
