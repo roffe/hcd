@@ -200,7 +200,7 @@ func (m *Main) setStates() {
 		return
 	}
 
-	if len(m.uecBytes) < 4 || len(m.recBytes) != 6 || len(m.vin) == 0 || len(m.uecPWMBytes) != 2 {
+	if len(m.uecBytes) < 4 || len(m.recBytes) != 6 || len(m.vin) == 0 || len(m.uecPWMBytes) < 2 {
 		dialog.ShowError(errors.New("Press \"Load configuration\" first"), m.Window) //lint:ignore ST1005 ignore this
 		return
 	}
