@@ -288,27 +288,22 @@ func NewMainWindow() *Main {
 				m.writeOutput(err.Error())
 				return
 			}
-
 			isadm, err := checkAdmin()
 			if err != nil {
 				m.writeOutput(err.Error())
 				return
 			}
-
 			if !isadm {
 				m.writeOutput("Please run as administrator to change Tech2 port")
 				return
 			}
-
 			k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\PassThruSupport.04.04\GM - Tech2`, registry.ALL_ACCESS|registry.WOW64_32KEY)
 			if err != nil {
 
 				m.writeOutput(err.Error())
 				return
 			}
-
 			m.writeOutput(fmt.Sprintf("Setting Tech2 port to COM%d", p))
-
 			if err := k.SetDWordValue("Port", uint32(p)); err != nil {
 				m.writeOutput(err.Error())
 				return
@@ -321,11 +316,11 @@ func NewMainWindow() *Main {
 		Alignment: fyne.TextAlignCenter,
 		Options:   adapters,
 		OnChanged: func(s string) {
+			m.App.Preferences().SetString(prefsSelectedAdapterKey, s)
 			if adapter, found := adapter.GetAdapterMap()[s]; found {
 				if adapter.RequiresSerialPort {
 					m.portSelector.Show()
 					m.tech2PortSelector.Hide()
-					m.App.Preferences().SetString(prefsSelectedAdapterKey, s)
 					m.portName = m.portSelector.Selected
 					return
 				} else if strings.HasPrefix(strings.ToLower(adapter.Name), "tech2") {
