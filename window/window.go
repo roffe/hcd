@@ -21,9 +21,9 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-//go:embed hk_white.png
+//go:embed logo.png
 var icon []byte
-var iconRes = fyne.NewStaticResource("hk_white.png", icon)
+var iconRes = fyne.NewStaticResource("logo.png", icon)
 
 type Main struct {
 	App    fyne.App

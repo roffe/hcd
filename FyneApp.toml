@@ -1,8 +1,8 @@
-Website = "https://hirschmann-koxha.de/"
+Website = "https://roffe.nu/"
 
 [Details]
-  Icon = "./window/hk_white.png"
+  Icon = "./window/logo.png"
   Name = "Saab NG9-3 Halogen Check Disabler"
-  ID = "com.hirschmannkoxha.hcd"
-  Version = "1.0.12"
-  Build = 8
+  ID = "com.roffe.hcd"
+  Version = "1.0.13"
+  Build = 2
