@@ -87,7 +87,7 @@ const (
 )
 
 func NewMainWindow() *Main {
-	a := app.NewWithID("com.hirschmannkoxha.hcd")
+	a := app.NewWithID("com.roffe.hcd")
 	a.Settings().SetTheme(theme.DefaultTheme())
 	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
 

@@ -1,7 +1,7 @@
-Website = "https://hirschmann-koxha.de/"
+Website = "https://roffe.nu/"
 
 [Details]
   Name = "Keygen"
-  ID = "com.hirschmannkoxha.hcd-keygen"
+  ID = "com.roffe.hcd-keygen"
   Version = "0.0.1"
   Build = 4

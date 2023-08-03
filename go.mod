@@ -1,4 +1,4 @@
-module github.com/hirschmann-koxha-gbr/hcd
+module github.com/roffe/hcd
 
 go 1.20
 

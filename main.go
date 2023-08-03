@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"log"
 
-	"github.com/hirschmann-koxha-gbr/hcd/window"
+	"github.com/roffe/hcd/window"
 )
 
 func init() {
