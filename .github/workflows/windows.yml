@@ -41,7 +41,14 @@ jobs:
     - name: Create Zip
       run: 7z a lightcontrol.zip LightControl.exe
     - name: Delete previous nightly release
-      run: gh release delete nightly --yes --cleanup-tag
+      run: |
+        gh release view nightly 2>$null
+        if ($LASTEXITCODE -eq 0) {
+          gh release delete nightly --yes --cleanup-tag
+        } else {
+          Write-Host "No existing nightly release to delete."
+          $global:LASTEXITCODE = 0
+        }
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Publish nightly release
