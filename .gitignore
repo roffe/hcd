@@ -2,3 +2,5 @@
 *.zip
 tmp
 dist
+*.sqlite
+*.tar.xz

@@ -10,15 +10,15 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/roffe/gocan/adapter"
+	"github.com/roffe/gocan"
 	"github.com/roffe/gocan/pkg/gmlan"
-	"golang.org/x/sys/windows"
-	"golang.org/x/sys/windows/registry"
+	"github.com/roffe/hcd/store"
 )
 
 //go:embed logo.png
@@ -28,11 +28,13 @@ var iconRes = fyne.NewStaticResource("logo.png", icon)
 type Main struct {
 	App    fyne.App
 	Window fyne.Window
+	DB     *store.Store
 
 	output     *widget.List
 	outputData binding.StringList
 
-	header *fyne.Container
+	header      *fyne.Container
+	historyList *fyne.Container
 
 	adapterSelector   *widget.Select
 	portSelector      *widget.Select
@@ -86,19 +88,21 @@ const (
 	timePerTick             = 14.5
 )
 
-func NewMainWindow() *Main {
-	a := app.NewWithID("com.roffe.hcd")
+func NewMainWindow(db *store.Store) *Main {
+	a := app.NewWithID("com.roffe.lightcontrol")
 	a.Settings().SetTheme(theme.DefaultTheme())
-	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
+	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Light Control %s Build %d", a.Metadata().Version, a.Metadata().Build))
 
 	w.SetIcon(iconRes)
+
 	w.Resize(fyne.NewSize(850, 705))
-	w.SetFixedSize(true)
+	//w.SetFixedSize(true)
 
 	w.SetMaster()
 
 	m := &Main{
 		App:               a,
+		DB:                db,
 		Window:            w,
 		outputData:        binding.NewStringList(),
 		uecInput:          widget.NewEntry(),
@@ -128,7 +132,7 @@ func NewMainWindow() *Main {
 		func(shortcut fyne.Shortcut) {
 			if val, err := GetMachineUUID(); err == nil {
 				m.writeOutput("copied machine UUID to clipboard")
-				w.Clipboard().SetContent(val)
+				fyne.CurrentApp().Clipboard().SetContent(val)
 			} else {
 				m.writeOutput("Error loading uuid: " + err.Error())
 			}
@@ -147,6 +151,9 @@ func NewMainWindow() *Main {
 			}
 		},
 	)
+
+	m.historyList = container.NewVBox()
+	m.refreshHistory()
 
 	m.output = widget.NewListWithData(
 		m.outputData,
@@ -263,7 +270,7 @@ func NewMainWindow() *Main {
 	}
 
 	var adapters []string
-	for _, p := range adapter.GetAdapterMap() {
+	for _, p := range gocan.ListAdapters() {
 		if p.Capabilities.SWCAN {
 			adapters = append(adapters, p.Name)
 		}
@@ -288,7 +295,7 @@ func NewMainWindow() *Main {
 				m.writeOutput(err.Error())
 				return
 			}
-			isadm, err := checkAdmin()
+			isadm, err := CheckAdmin()
 			if err != nil {
 				m.writeOutput(err.Error())
 				return
@@ -297,17 +304,21 @@ func NewMainWindow() *Main {
 				m.writeOutput("Please run as administrator to change Tech2 port")
 				return
 			}
-			k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\PassThruSupport.04.04\GM - Tech2`, registry.ALL_ACCESS|registry.WOW64_32KEY)
-			if err != nil {
+			if err := SetTech2Port(p); err != nil {
+				m.writeOutput(err.Error())
+				return
+			}
 
-				m.writeOutput(err.Error())
-				return
-			}
+			//k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\PassThruSupport.04.04\GM - Tech2`, registry.ALL_ACCESS|registry.WOW64_32KEY)
+			//if err != nil {
+			//	m.writeOutput(err.Error())
+			//	return
+			//}
+			//if err := k.SetDWordValue("Port", uint32(p)); err != nil {
+			//	m.writeOutput(err.Error())
+			//	return
+			//}
 			m.writeOutput(fmt.Sprintf("Setting Tech2 port to COM%d", p))
-			if err := k.SetDWordValue("Port", uint32(p)); err != nil {
-				m.writeOutput(err.Error())
-				return
-			}
 		},
 	}
 	m.tech2PortSelector.Hide()
@@ -317,39 +328,46 @@ func NewMainWindow() *Main {
 		Options:   adapters,
 		OnChanged: func(s string) {
 			m.App.Preferences().SetString(prefsSelectedAdapterKey, s)
-			if adapter, found := adapter.GetAdapterMap()[s]; found {
-				if adapter.RequiresSerialPort {
-					m.portSelector.Show()
-					m.tech2PortSelector.Hide()
-					m.portName = m.portSelector.Selected
-					return
-				} else if strings.HasPrefix(strings.ToLower(adapter.Name), "tech2") {
-					m.tech2PortSelector.Show()
-					m.portSelector.Hide()
-				} else {
-					m.portSelector.Hide()
-					m.tech2PortSelector.Hide()
+
+			for _, adapter := range gocan.ListAdapters() {
+				if adapter.Name == s {
+					if adapter.RequiresSerialPort {
+						m.portSelector.Show()
+						m.tech2PortSelector.Hide()
+						m.portName = m.portSelector.Selected
+						return
+					} else if strings.HasPrefix(strings.ToLower(adapter.Name), "tech2") {
+						m.tech2PortSelector.Show()
+						m.portSelector.Hide()
+					} else {
+						m.portSelector.Hide()
+						m.tech2PortSelector.Hide()
+					}
 				}
 			}
 		},
 	}
 
 	if selected := m.App.Preferences().String(prefsSelectedAdapterKey); selected != "" {
-		if adapter, found := adapter.GetAdapterMap()[selected]; found {
-			if adapter.RequiresSerialPort {
-				if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
-					m.portSelector.SetSelected(selectedPort)
+		for _, adapter := range gocan.ListAdapters() {
+			if adapter.Name == selected {
+
+				//if adapter, found := gocan.GetAdapterMap()[selected]; found {
+				if adapter.RequiresSerialPort {
+					if selectedPort := m.App.Preferences().String(prefsSelectedPortKey); selectedPort != "" {
+						m.portSelector.SetSelected(selectedPort)
+					}
+					m.portSelector.Show()
+					m.tech2PortSelector.Hide()
+				} else if strings.HasPrefix(strings.ToLower(selected), "tech2") {
+					m.tech2PortSelector.Show()
+					m.portSelector.Hide()
+				} else {
+					m.portSelector.Hide()
+					m.tech2PortSelector.Hide()
 				}
-				m.portSelector.Show()
-				m.tech2PortSelector.Hide()
-			} else if strings.HasPrefix(strings.ToLower(selected), "tech2") {
-				m.tech2PortSelector.Show()
-				m.portSelector.Hide()
-			} else {
-				m.portSelector.Hide()
-				m.tech2PortSelector.Hide()
+				m.adapterSelector.SetSelected(selected)
 			}
-			m.adapterSelector.SetSelected(selected)
 		}
 	}
 
@@ -375,48 +393,6 @@ func NewMainWindow() *Main {
 	return m
 }
 
-func checkAdmin() (bool, error) {
-	var sid *windows.SID
-
-	// Although this looks scary, it is directly copied from the
-	// official windows documentation. The Go API for this is a
-	// direct wrap around the official C++ API.
-	// See https://docs.microsoft.com/en-us/windows/desktop/api/securitybaseapi/nf-securitybaseapi-checktokenmembership
-	err := windows.AllocateAndInitializeSid(
-		&windows.SECURITY_NT_AUTHORITY,
-		2,
-		windows.SECURITY_BUILTIN_DOMAIN_RID,
-		windows.DOMAIN_ALIAS_RID_ADMINS,
-		0, 0, 0, 0, 0, 0,
-		&sid)
-	if err != nil {
-		return false, fmt.Errorf("SID Error: %w", err)
-	}
-	defer windows.FreeSid(sid)
-
-	// This appears to cast a null pointer so I'm not sure why this
-	// works, but this guy says it does and it Works for Me™:
-	// https://github.com/golang/go/issues/28804#issuecomment-438838144
-	token := windows.Token(0)
-
-	member, err := token.IsMember(sid)
-	if err != nil {
-		return false, fmt.Errorf("Token Membership Error: %w", err) //lint:ignore ST1005 ignore error string
-	}
-
-	// Also note that an admin is _not_ necessarily considered
-	// elevated.
-	// For elevation see https://github.com/mozey/run-as-admin
-	if member {
-		return true, nil
-	}
-
-	if token.IsElevated() {
-		return true, nil
-	}
-	return false, nil
-}
-
 func (m *Main) displayVin() {
 	c, err := m.initCAN()
 	if err != nil {
@@ -429,7 +405,7 @@ func (m *Main) displayVin() {
 		m.writeOutput(err.Error())
 		return
 	}
-	m.Window.Clipboard().SetContent(string(m.vin))
+	fyne.CurrentApp().Clipboard().SetContent(string(m.vin))
 	dialog.ShowInformation("VIN", fmt.Sprintf("VIN: %s copied to Clipboard", m.vin), m.Window)
 }
 

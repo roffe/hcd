@@ -1,8 +1,11 @@
 Website = "https://roffe.nu/"
 
 [Details]
-  Icon = "./window/logo.png"
-  Name = "Saab NG9-3 Halogen Check Disabler"
-  ID = "com.roffe.hcd"
-  Version = "1.0.13"
-  Build = 2
+Icon = "./window/logo.png"
+Name = "LightControl"
+ID = "com.roffe.hcd"
+Version = "2.0.1"
+Build = 11
+
+[Migrations]
+fyneDo = true

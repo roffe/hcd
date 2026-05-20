@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"log"
 
+	"github.com/roffe/hcd/store"
 	"github.com/roffe/hcd/window"
 )
 
@@ -12,5 +13,11 @@ func init() {
 }
 
 func main() {
-	window.NewMainWindow().Window.ShowAndRun()
+	db, err := store.New()
+	if err != nil {
+		log.Println(err)
+	}
+	defer db.Close()
+
+	window.NewMainWindow(db).Window.ShowAndRun()
 }

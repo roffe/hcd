@@ -2,6 +2,7 @@ package window
 
 import (
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
@@ -9,10 +10,10 @@ import (
 
 func (m *Main) Layout() fyne.CanvasObject {
 	m.customValues = container.New(layout.NewGridLayout(2),
-		container.NewMax(
+		container.NewStack(
 			container.NewBorder(nil, nil, widget.NewLabel("UEC value:"), nil, m.uecInput),
 		),
-		container.NewMax(
+		container.NewStack(
 			container.NewBorder(nil, nil, widget.NewLabel("REC value:"), nil, m.recInput),
 		),
 	)
@@ -26,7 +27,7 @@ func (m *Main) Layout() fyne.CanvasObject {
 
 	footer := container.NewVBox(
 		container.New(layout.NewGridLayout(2),
-			container.NewMax(),
+			container.NewStack(),
 			container.NewBorder(nil, nil, widget.NewLabel("UEC PWM:"), nil, m.uecPWM),
 		),
 		container.New(layout.NewGridLayout(2),
@@ -46,40 +47,63 @@ func (m *Main) Layout() fyne.CanvasObject {
 	}
 	m.portOverride.Hide()
 
-	return container.NewBorder(
+	logo := canvas.NewImageFromResource(iconRes)
+	logo.Translucency = 0.7
+	logo.FillMode = canvas.ImageFillContain
+	logo.ScaleMode = canvas.ImageScaleFastest
+
+	histLabel := widget.NewLabel("History")
+	histLabel.Alignment = fyne.TextAlignCenter
+	histLabel.TextStyle = fyne.TextStyle{Bold: true}
+
+	left := container.NewBorder(
+		histLabel,
 		nil,
-		footer,
 		nil,
 		nil,
-		&container.Split{
-			Horizontal: true,
-			Offset:     0.8,
-			Leading: container.NewBorder(
+		container.NewVScroll(
+			m.historyList,
+		),
+	)
+
+	center := container.NewHSplit(
+		left,
+		container.NewStack(
+			container.NewBorder(
 				m.header,
 				nil,
 				nil,
 				nil,
 				m.output,
 			),
-			Trailing: container.NewVBox(
-				m.adapterSelector,
-				m.portSelector,
-				m.portOverride,
-				m.tech2PortSelector,
-				widget.NewForm(
-					widget.NewFormItem("Front Parking Lights", m.uecParkingLightsCheckbox),
-					widget.NewFormItem("Front Fog Lights", m.uecFoglightsCheckbox),
-					widget.NewFormItem("Rear Fog Lights", m.recFoglightsCheckbox),
-					widget.NewFormItem("Low Beams", m.uecLowBeamsCheckbox),
-					widget.NewFormItem("High Beams", m.uecHighBeamsCheckbox),
-					widget.NewFormItem("Front Turn Signals", m.uecTurnSignalsCheckbox),
-					widget.NewFormItem("Rear Turn Signals", m.recTurnSignalsCheckbox),
-					widget.NewFormItem("Tail Lights", m.recTailLightsCheckbox),
-					widget.NewFormItem("Stop Lights", m.recStopLightsCheckbox),
-					widget.NewFormItem("Reverse Light", m.recReverseLightsCheckbox),
-					widget.NewFormItem("License Plate", m.recNumberPlateCheckbox),
-				),
+			logo,
+		),
+	)
+	center.Offset = 0.01
+
+	return container.NewBorder(
+		nil,
+		footer,
+		nil,
+		container.NewVBox(
+			m.adapterSelector,
+			m.portSelector,
+			m.portOverride,
+			m.tech2PortSelector,
+			widget.NewForm(
+				widget.NewFormItem("Front Parking Lights", m.uecParkingLightsCheckbox),
+				widget.NewFormItem("Front Fog Lights", m.uecFoglightsCheckbox),
+				widget.NewFormItem("Rear Fog Lights", m.recFoglightsCheckbox),
+				widget.NewFormItem("Low Beams", m.uecLowBeamsCheckbox),
+				widget.NewFormItem("High Beams", m.uecHighBeamsCheckbox),
+				widget.NewFormItem("Front Turn Signals", m.uecTurnSignalsCheckbox),
+				widget.NewFormItem("Rear Turn Signals", m.recTurnSignalsCheckbox),
+				widget.NewFormItem("Tail Lights", m.recTailLightsCheckbox),
+				widget.NewFormItem("Stop Lights", m.recStopLightsCheckbox),
+				widget.NewFormItem("Reverse Light", m.recReverseLightsCheckbox),
+				widget.NewFormItem("License Plate", m.recNumberPlateCheckbox),
 			),
-		},
+		),
+		center,
 	)
 }

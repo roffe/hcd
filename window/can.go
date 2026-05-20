@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"github.com/roffe/gocan"
-	"github.com/roffe/gocan/adapter"
 	"github.com/roffe/gocan/pkg/gmlan"
 )
 
@@ -17,25 +18,32 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 	if m.adapterSelector.Selected == "" {
 		return nil, fmt.Errorf("No adapter selected") //lint:ignore ST1005 ignore this error
 	}
-	device, err := adapter.New(
+	device, err := gocan.NewAdapter(
 		m.adapterSelector.Selected,
 		&gocan.AdapterConfig{
 			Port:         m.portName,
 			PortBaudrate: 2000000,
 			CANRate:      33.3,
 			CANFilter:    []uint32{0x64F, 0x649},
-			OnMessage: func(s string) {
-				m.writeOutput(s)
-			},
-			OnError: func(err error) {
-				m.writeOutput("err: " + err.Error())
-			},
+			//OnMessage: func(s string) {
+			//	m.writeOutput(s)
+			//},
+			//OnError: func(err error) {
+			//	m.writeOutput("err: " + err.Error())
+			//},
 		},
 	)
 	if err != nil {
 		return nil, err
 	}
-	return gocan.New(context.Background(), device)
+
+	eventHandler := func(event gocan.Event) {
+		fyne.Do(func() {
+			m.writeOutput(event.String())
+		})
+	}
+
+	return gocan.NewWithOpts(context.Background(), device, gocan.WithEventHandler(eventHandler))
 }
 
 func (m *Main) getVIN(gm *gmlan.Client, checkLicense bool) error {
@@ -51,6 +59,9 @@ func (m *Main) getVIN(gm *gmlan.Client, checkLicense bool) error {
 }
 
 func (m *Main) getStates() {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
 	m.disableButtons()
 	defer m.enableButtons()
 
@@ -72,7 +83,7 @@ func (m *Main) getStates() {
 		m.writeOutput(err.Error())
 		return
 	}
-	uecPWMBytes, err := uec.ReadDataByIdentifier(context.TODO(), 0x40)
+	uecPWMBytes, err := uec.ReadDataByIdentifier(ctx, 0x40)
 	if err != nil {
 		m.writeOutput(err.Error())
 		return
@@ -80,7 +91,7 @@ func (m *Main) getStates() {
 	m.uecPWMBytes = uecPWMBytes
 	m.uecPWM.SetText(hex.EncodeToString(uecPWMBytes))
 
-	uecBytes, err := uec.ReadDataByIdentifier(context.TODO(), 0x4D)
+	uecBytes, err := uec.ReadDataByIdentifier(ctx, 0x4D)
 	if err != nil {
 		m.writeOutput(err.Error())
 		return
@@ -89,12 +100,17 @@ func (m *Main) getStates() {
 
 	// REC
 	rec := gmlan.New(c, 0x249, 0x649)
-	recBytes, err := rec.ReadDataByIdentifier(context.TODO(), 0x45)
+	recBytes, err := rec.ReadDataByIdentifier(ctx, 0x45)
 	if err != nil {
 		m.writeOutput(err.Error())
 		return
 	}
 	m.setInternalRECState(recBytes)
+
+	if _, err := m.DB.CreateValueHistoryRead(ctx, string(m.vin), uecBytes, uecPWMBytes, recBytes); err != nil {
+		m.writeOutput("Failed saving value history: " + err.Error())
+	}
+
 	m.writeOutput("Read configuration from car successfully")
 }
 
@@ -136,6 +152,7 @@ func (m *Main) setInternalUECState(data []byte) {
 
 func (m *Main) setInternalRECState(data []byte) {
 	if len(data) != 6 {
+		m.writeOutput("REC bytes invalid length")
 		return
 	}
 	m.recBytes = data
@@ -192,7 +209,7 @@ func (m *Main) setStates() {
 	uec := gmlan.New(c, 0x24F, 0x64f)
 
 	if err := uec.TesterPresentNoResponseAllowed(); err != nil {
-		m.writeOutput("TPNRA: " + err.Error())
+		m.writeOutput("TesterPresentNoResponseAllowed: " + err.Error())
 	}
 
 	if err := m.getVIN(uec, true); err != nil {
@@ -221,5 +238,10 @@ func (m *Main) setStates() {
 		m.outputData.Append("REC: " + err.Error())
 		return
 	}
+
+	if _, err := m.DB.CreateValueHistoryWrite(context.TODO(), string(m.vin), m.uecBytes, m.uecPWMBytes, m.recBytes); err != nil {
+		m.writeOutput("Failed saving value history: " + err.Error())
+	}
+
 	m.writeOutput("Wrote configuration to car successfully")
 }
