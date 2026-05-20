@@ -30,6 +30,26 @@ jobs:
       run: |
         go get .
         go install fyne.io/tools/cmd/fyne@latest
+        .\setup_build_env.ps1
     - name: Build
-      run: fyne package --release
-
+      run: |
+        $env:CGO_ENABLED = "1"
+        $env:CC = "x86_64-w64-mingw32-clang.exe"
+        $env:CXX = "x86_64-w64-mingw32-clang++.exe"
+        fyne package --release
+    - name: Create Zip
+      run: 7z a lightcontrol.zip LightControl.exe
+    - name: Delete previous nightly release
+      run: gh release delete nightly --yes --cleanup-tag || exit 0
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Publish nightly release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: nightly
+        name: Nightly Build
+        body: Automated build from `${{ github.ref_name }}` at ${{ github.sha }}.
+        prerelease: true
+        make_latest: false
+        target_commitish: ${{ github.sha }}
+        files: lightcontrol.zip
