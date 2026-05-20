@@ -36,6 +36,7 @@ jobs:
         $env:CGO_ENABLED = "1"
         $env:CC = "x86_64-w64-mingw32-clang.exe"
         $env:CXX = "x86_64-w64-mingw32-clang++.exe"
+        $env:PATH += ";D:\a\hcd\hcd\llvm-mingw\bin"
         fyne package --release
     - name: Create Zip
       run: 7z a lightcontrol.zip LightControl.exe
