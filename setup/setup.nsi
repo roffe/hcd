@@ -26,6 +26,8 @@
 ;--------------------------------
 ;Interface Settings
   !define MUI_ABORTWARNING
+  !define MUI_HEADERIMAGE
+  !define MUI_HEADERIMAGE_BITMAP "header.bmp"
 ;--------------------------------
 ;Pages
   ; !insertmacro MUI_PAGE_LICENSE "${NSISDIR}\Docs\Modern UI\License.txt"
@@ -141,10 +143,11 @@ SectionEnd
 Section "Uninstall"
   !insertmacro DeleteFileOrAskAbort "$InstDir\LightControl.exe"
   Delete "$InstDir\Uninstall.exe"
-  RMDir "$InstDir\Tech2 SAE J2534 DLL"
+  Delete "$InstDir\opengl32.dll"
+  Delete "$InstDir\readme.txt"
+  RMDir /r "$InstDir\Tech2 SAE J2534 DLL"
   RMDir "$InstDir"
   
-
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
   Delete "$SMPROGRAMS\$StartMenuFolder\LightControl.lnk"  
   Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
