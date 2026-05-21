@@ -3,14 +3,12 @@ package window
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/roffe/hcd/ent"
 )
 
 func (m *Main) refreshHistory() {
@@ -37,20 +35,14 @@ func (m *Main) refreshHistory() {
 
 			entries := container.NewVBox()
 			for _, h := range hist {
-				//entry := m.createHistoryEntry(h, popup)
 				createdAt := widget.NewLabel(h.CreatedAt.Format("02/01-06 15:04:05"))
-
 				uecBytes := widget.NewLabel(fmt.Sprintf("%02X", h.UEC))
 				uecBytes.Selectable = true
-
 				uecPWMBytes := widget.NewLabel(fmt.Sprintf("%02X", h.UECPWM))
 				uecPWMBytes.Selectable = true
-
 				recBytes := widget.NewLabel(fmt.Sprintf("%02X", h.REC))
 				recBytes.Selectable = true
-
 				typeLabel := widget.NewLabel(h.Type.String())
-
 				loadBtn := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 					m.setInternalUECState(h.UEC)
 					m.setInternalRECState(h.REC)
@@ -59,9 +51,7 @@ func (m *Main) refreshHistory() {
 					popup.Hide()
 				})
 				loadBtn.Importance = widget.LowImportance
-
 				entry := container.NewGridWithColumns(6, typeLabel, createdAt, uecBytes, uecPWMBytes, recBytes, loadBtn)
-
 				entries.Add(entry)
 			}
 
@@ -137,32 +127,4 @@ func (m *Main) refreshHistory() {
 			popup.Show()
 		}))
 	}
-}
-
-func (m *Main) createHistoryEntry(entry *ent.ValueHistory, popup *widget.PopUp) fyne.CanvasObject {
-	createdAt := widget.NewLabel(entry.CreatedAt.Format("02/01-06 15:04:05"))
-
-	uecBytes := widget.NewLabel(fmt.Sprintf("%02X", entry.UEC))
-	uecBytes.Selectable = true
-
-	uecPWMBytes := widget.NewLabel(fmt.Sprintf("%02X", entry.UECPWM))
-	uecPWMBytes.Selectable = true
-
-	recBytes := widget.NewLabel(fmt.Sprintf("%02X", entry.REC))
-	recBytes.Selectable = true
-
-	typeLabel := widget.NewLabel(entry.Type.String())
-
-	loadBtn := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
-		m.setInternalUECState(entry.UEC)
-		m.setInternalRECState(entry.REC)
-		m.uecPWMBytes = entry.UECPWM
-		m.uecPWM.SetText(fmt.Sprintf("%02X", entry.UECPWM))
-		log.Println(popup)
-		popup.Hide()
-	})
-	loadBtn.Importance = widget.LowImportance
-
-	return container.NewGridWithColumns(6, typeLabel, createdAt, uecBytes, uecPWMBytes, recBytes, loadBtn)
-
 }

@@ -152,6 +152,17 @@ func NewMainWindow(db *store.Store) *Main {
 		},
 	)
 
+	w.Canvas().AddShortcut(
+		&desktop.CustomShortcut{KeyName: fyne.KeyD, Modifier: fyne.KeyModifierControl},
+		func(shortcut fyne.Shortcut) {
+			if isDev() {
+				m.writeOutput("DEVELOPMENT VERSION")
+			} else {
+				m.writeOutput("LIVE VERSION")
+			}
+		},
+	)
+
 	m.historyList = container.NewVBox()
 	m.refreshHistory()
 
@@ -447,7 +458,17 @@ func (m *Main) setRECMask(bytePos, pos uint) func(v bool) {
 	}
 }
 
+var preFlightCheck = "1"
+
+func isDev() bool {
+	return preFlightCheck == "1337SAAB"
+}
+
 func (m *Main) checkLicense() error {
+	if isDev() {
+		return nil
+	}
+
 	if len(m.vin) == 0 {
 		return fmt.Errorf("Load configuration first") //lint:ignore ST1005 ignore this error
 	}

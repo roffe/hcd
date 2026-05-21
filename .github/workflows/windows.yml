@@ -37,6 +37,8 @@ jobs:
         $env:CC = "x86_64-w64-mingw32-clang.exe"
         $env:CXX = "x86_64-w64-mingw32-clang++.exe"
         $env:PATH += ";D:\a\hcd\hcd\llvm-mingw\bin"
+        $env:GOOS = "windows"
+        $env:GOARCH = "386"
         fyne package --release
     - name: Create Zip
       run: 7z a lightcontrol.zip LightControl.exe
