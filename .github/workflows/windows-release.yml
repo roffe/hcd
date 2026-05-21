@@ -42,17 +42,14 @@ jobs:
         $env:GOARCH = "386"
         fyne package --release
     - name: Create Setup
-      if: github.ref_type == 'tag'
-      run: C:\Program Files (x86)\NSIS\makensis.exe .\setup\setup.nsi
+      run: |
+        & "C:\Program Files (x86)\NSIS\makensis.exe" .\setup\setup.nsi
     - name: Creating Zip
-      if: github.ref_type == 'tag'
       run: 7z a lightcontrol.zip LightControl.exe
     - name: Create Setup Zip
-      if: github.ref_type == 'tag'
       run: 7z a lightcontrol-setup.zip lightcontrol_setup.exe
     - name: Release
       uses: softprops/action-gh-release@v2
-      if: github.ref_type == 'tag'
       env:
         GITHUB_REPOSITORY: roffe/hcd
       with:

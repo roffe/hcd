@@ -45,7 +45,8 @@ jobs:
         $env:GOARCH = "386"
         fyne package --release
     - name: Create Setup
-      run: C:\Program Files (x86)\NSIS\makensis.exe .\setup\setup.nsi
+      run: |
+        & "C:\Program Files (x86)\NSIS\makensis.exe" .\setup\setup.nsi
     - name: Create Zip
       run: 7z a lightcontrol.zip LightControl.exe
     - name: Create Setup Zip
