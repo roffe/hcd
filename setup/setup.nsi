@@ -100,7 +100,7 @@ Section "LightControl" SecCore
   !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
-Section "Tech2 SAE J2534 DLL" SecTech2
+Section /o "Tech2 SAE J2534 DLL" SecTech2
   SetOutPath "$InstDir"
   FILE /r "..\dist\Tech2 SAE J2534 DLL"
 
@@ -119,7 +119,7 @@ SectionEnd
   ;Language strings
   LangString DESC_SecCore ${LANG_ENGLISH} "LightControl Core."
   LangString DESC_SecTech2 ${LANG_ENGLISH} "Tech2 SAE J2534 DLL"
-  LangString DESC_SecOpenGL ${LANG_ENGLISH} "Software renderer if your graphicscard is missing OpenGL drivers"
+  LangString DESC_SecOpenGL ${LANG_ENGLISH} "Software renderer if your graphics card is missing OpenGL support"
 
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN

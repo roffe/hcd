@@ -43,7 +43,7 @@ jobs:
         $env:PATH += ";D:\a\hcd\hcd\llvm-mingw\bin"
         $env:GOOS = "windows"
         $env:GOARCH = "386"
-        fyne package --release
+        fyne package -tags j2534 --release
     - name: Create Setup
       run: |
         & "C:\Program Files (x86)\NSIS\makensis.exe" .\setup\setup.nsi
