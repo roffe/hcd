@@ -73,14 +73,10 @@ FunctionEnd
 
 Section "LightControl" SecCore
   SetOutPath "$InstDir"
-  
+
   ;ADD YOUR OWN FILES HERE...
   FILE ..\LightControl.exe
-  FILE /r "..\dist\Tech2 SAE J2534 DLL"
   FILE ..\dist\readme.txt
-
-  ;Run bundled setup.exe (e.g. Tech2 J2534 driver installer)
-  ExecWait '"$InstDir\Tech2 SAE J2534 DLL\setup.exe"'
 
   ;Store installation folder
   WriteRegStr HKLM "${REGPATH_UNINSTSUBKEY}" "DisplayName" "${NAME}"
@@ -102,7 +98,15 @@ Section "LightControl" SecCore
   !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
-Section "OpenGL32 DLL" SecOpenGL
+Section "Tech2 SAE J2534 DLL" SecTech2
+  SetOutPath "$InstDir"
+  FILE /r "..\dist\Tech2 SAE J2534 DLL"
+
+  ;Run bundled setup.exe (Tech2 J2534 driver installer)
+  ExecWait '"$InstDir\Tech2 SAE J2534 DLL\setup.exe"'
+SectionEnd
+
+Section /o "OpenGL dll" SecOpenGL
   SetOutPath "$InstDir"
   FILE ..\dist\opengl32.dll
 SectionEnd
@@ -112,11 +116,13 @@ SectionEnd
 
   ;Language strings
   LangString DESC_SecCore ${LANG_ENGLISH} "LightControl Core."
-  LangString DESC_SecOpenGL ${LANG_ENGLISH} "Bundled opengl32.dll placed next to LightControl.exe (software OpenGL fallback)."
+  LangString DESC_SecTech2 ${LANG_ENGLISH} "Tech2 SAE J2534 DLL"
+  LangString DESC_SecOpenGL ${LANG_ENGLISH} "Software renderer if your graphicscard is missing OpenGL drivers"
 
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} $(DESC_SecCore)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecTech2} $(DESC_SecTech2)
     !insertmacro MUI_DESCRIPTION_TEXT ${SecOpenGL} $(DESC_SecOpenGL)
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
  

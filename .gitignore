@@ -1,5 +1,7 @@
-*.exe
 *.zip
 tmp
 *.sqlite
 *.tar.xz
+keygen-hk/*.exe
+keygen-mc/*.exe
+dist-hk/setup.exe
