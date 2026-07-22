@@ -1,0 +1,64 @@
+name: windows
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-i686 nsis zip
+          # ponytail: CLI pinned to the fyne version in go.mod — @latest generates metadata code v2.3.5 can't compile
+          go install fyne.io/fyne/v2/cmd/fyne@v2.3.5
+          go install github.com/akavel/rsrc@latest
+
+      - name: Build exe
+        env:
+          CGO_ENABLED: "1"
+          GOOS: windows
+          GOARCH: "386"
+          CC: i686-w64-mingw32-gcc
+        run: |
+          rsrc -arch 386 -manifest manifest.xml
+          fyne package --release
+
+      - name: Build installer
+        run: |
+          VERSION=$(sed -n 's/.*Version = "\(.*\)"/\1/p' FyneApp.toml)
+          makensis -DVERSION="$VERSION" setup/setup.nsi
+
+      - name: Create zips
+        run: |
+          zip -9 hcd.zip "Saab NG9-3 Halogen Check Disabler.exe"
+          zip -9 hcd_setup.zip hcd_setup.exe
+
+      - name: Delete previous latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete latest --yes --cleanup-tag || true
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: latest
+          name: Latest
+          body: Automated build from `${{ github.ref_name }}` at ${{ github.sha }}.
+          make_latest: true
+          target_commitish: ${{ github.sha }}
+          files: |
+            hcd.zip
+            hcd_setup.zip

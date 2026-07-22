@@ -18,8 +18,6 @@ func (m *Main) Layout() fyne.CanvasObject {
 	)
 	m.customValues.Hidden = !m.App.Preferences().Bool("customValues")
 
-	m.header = container.NewBorder(nil, nil, widget.NewLabel("License:"), nil, m.licenseInput)
-
 	//helpBtn := widget.NewButtonWithIcon("Help", theme.HelpIcon(), func() {
 	//	help.NewWindow(m.App)
 	//})
@@ -54,13 +52,7 @@ func (m *Main) Layout() fyne.CanvasObject {
 		&container.Split{
 			Horizontal: true,
 			Offset:     0.8,
-			Leading: container.NewBorder(
-				m.header,
-				nil,
-				nil,
-				nil,
-				m.output,
-			),
+			Leading:    m.output,
 			Trailing: container.NewVBox(
 				m.adapterSelector,
 				m.portSelector,

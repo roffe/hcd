@@ -38,16 +38,13 @@ func (m *Main) initCAN() (*gocan.Client, error) {
 	return gocan.New(context.Background(), device)
 }
 
-func (m *Main) getVIN(gm *gmlan.Client, checkLicense bool) error {
+func (m *Main) getVIN(gm *gmlan.Client) error {
 	var err error
 	m.vin, err = gm.ReadDataByIdentifier(context.TODO(), 0x90)
 	if err != nil {
 		return err
 	}
-	if !checkLicense {
-		return nil
-	}
-	return m.checkLicense()
+	return nil
 }
 
 func (m *Main) getStates() {
@@ -68,7 +65,7 @@ func (m *Main) getStates() {
 		m.writeOutput("TPNRA: " + err.Error())
 	}
 
-	if err := m.getVIN(uec, true); err != nil {
+	if err := m.getVIN(uec); err != nil {
 		m.writeOutput(err.Error())
 		return
 	}
@@ -195,7 +192,7 @@ func (m *Main) setStates() {
 		m.writeOutput("TPNRA: " + err.Error())
 	}
 
-	if err := m.getVIN(uec, true); err != nil {
+	if err := m.getVIN(uec); err != nil {
 		m.writeOutput(err.Error())
 		return
 	}

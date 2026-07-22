@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"log"
-
-	"golang.org/x/sys/windows/registry"
 )
 
 func setBit(value byte, position uint, bitValue bool) byte {
@@ -42,18 +40,4 @@ func CCalc(b []byte) string {
 
 func freqToSeconds(f float64) float64 {
 	return timePerTick * f / 1000
-}
-
-func GetMachineUUID() (string, error) {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Cryptography`, registry.QUERY_VALUE|registry.WOW64_64KEY)
-	if err != nil {
-		return "", err
-	}
-	defer k.Close()
-
-	uuid, _, err := k.GetStringValue("MachineGuid")
-	if err != nil {
-		return "", err
-	}
-	return uuid, nil
 }
