@@ -35,7 +35,6 @@ type Main struct {
 	tech2PortSelector *widget.Select
 
 	getBtn *widget.Button
-	vinBtn *widget.Button
 	setBtn *widget.Button
 
 	uecInput *widget.Entry
@@ -85,8 +84,7 @@ func NewMainWindow() *Main {
 	w := a.NewWindow(fmt.Sprintf("Saab NG9-3 Halogen Check Disabler %s Build %d", a.Metadata().Version, a.Metadata().Build))
 
 	w.SetIcon(iconRes)
-	w.Resize(fyne.NewSize(850, 705))
-	w.SetFixedSize(true)
+	w.Resize(fyne.NewSize(900, 700))
 
 	w.SetMaster()
 
@@ -162,18 +160,18 @@ func NewMainWindow() *Main {
 		},
 	}
 
-	m.uecParkingLightsCheckbox = widget.NewCheck("", m.setUECMask(1, 7))
-	m.uecFoglightsCheckbox = widget.NewCheck("", m.setUECMask(1, 6))
-	m.uecLowBeamsCheckbox = widget.NewCheck("", m.setUECMask(1, 5))
-	m.uecHighBeamsCheckbox = widget.NewCheck("", m.setUECMask(1, 4))
-	m.uecTurnSignalsCheckbox = widget.NewCheck("", m.setUECMask(1, 0))
+	m.uecParkingLightsCheckbox = widget.NewCheck("Parking", m.setUECMask(1, 7))
+	m.uecFoglightsCheckbox = widget.NewCheck("Fog", m.setUECMask(1, 6))
+	m.uecLowBeamsCheckbox = widget.NewCheck("Low beam", m.setUECMask(1, 5))
+	m.uecHighBeamsCheckbox = widget.NewCheck("High beam", m.setUECMask(1, 4))
+	m.uecTurnSignalsCheckbox = widget.NewCheck("Turn", m.setUECMask(1, 0))
 
-	m.recTailLightsCheckbox = widget.NewCheck("", m.setRECMask(1, 7))
-	m.recFoglightsCheckbox = widget.NewCheck("", m.setRECMask(1, 6))
-	m.recStopLightsCheckbox = widget.NewCheck("", m.setRECMask(1, 5))
-	m.recReverseLightsCheckbox = widget.NewCheck("", m.setRECMask(1, 4))
-	m.recNumberPlateCheckbox = widget.NewCheck("", m.setRECMask(1, 3))
-	m.recTurnSignalsCheckbox = widget.NewCheck("", m.setRECMask(2, 3))
+	m.recTailLightsCheckbox = widget.NewCheck("Tail", m.setRECMask(1, 7))
+	m.recFoglightsCheckbox = widget.NewCheck("Fog", m.setRECMask(1, 6))
+	m.recStopLightsCheckbox = widget.NewCheck("Stop", m.setRECMask(1, 5))
+	m.recReverseLightsCheckbox = widget.NewCheck("Reverse", m.setRECMask(1, 4))
+	m.recNumberPlateCheckbox = widget.NewCheck("Plate", m.setRECMask(1, 3))
+	m.recTurnSignalsCheckbox = widget.NewCheck("Turn", m.setRECMask(2, 3))
 
 	m.uecCheckFreq.AddListener(binding.NewDataListener(func() {
 		f, err := m.uecCheckFreq.Get()
@@ -298,12 +296,6 @@ func NewMainWindow() *Main {
 		Icon:     theme.DocumentSaveIcon(),
 	}
 
-	m.vinBtn = &widget.Button{
-		Text:     "Copy VIN",
-		OnTapped: m.displayVin,
-		Icon:     theme.SearchIcon(),
-	}
-
 	m.getBtn = &widget.Button{
 		Text:     "Load configuration",
 		OnTapped: m.getStates,
@@ -332,14 +324,12 @@ func (m *Main) displayVin() {
 
 func (m *Main) disableButtons() {
 	m.getBtn.Disable()
-	m.vinBtn.Disable()
 	m.setBtn.Disable()
 
 }
 
 func (m *Main) enableButtons() {
 	m.getBtn.Enable()
-	m.vinBtn.Enable()
 	m.setBtn.Enable()
 }
 

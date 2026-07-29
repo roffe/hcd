@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := build
-@PHONY: build build-nolicense setup
+@PHONY: build setup
 
 setup: build
 	makensis -DVERSION=$$(sed -n 's/.*Version = "\(.*\)"/\1/p' FyneApp.toml) setup/setup.nsi
