@@ -48,6 +48,7 @@ func (m *Main) getVIN(gm *gmlan.Client) error {
 }
 
 func (m *Main) getStates() {
+	m.settingsLoaded = false
 	m.disableButtons()
 	defer m.enableButtons()
 
@@ -93,6 +94,7 @@ func (m *Main) getStates() {
 	}
 	m.setInternalRECState(recBytes)
 	m.writeOutput("Read configuration from car successfully")
+	m.settingsLoaded = true
 }
 
 func (m *Main) setInternalUECState(data []byte) {
@@ -175,6 +177,11 @@ func (m *Main) setInternalRECState(data []byte) {
 }
 
 func (m *Main) setStates() {
+	if !m.settingsLoaded {
+		dialog.ShowError(errors.New("Press \"Get configuration\" first"), m.Window)
+		return
+	}
+
 	m.disableButtons()
 	defer m.enableButtons()
 

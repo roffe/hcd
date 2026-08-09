@@ -2,7 +2,7 @@ module github.com/roffe/hcd
 
 go 1.22.0
 
-require fyne.io/fyne/v2 v2.8.1-0.20260720183114-d078c4f6e91f
+require fyne.io/fyne/v2 v2.8.1-0.20260808003003-57f5b07179b8
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect

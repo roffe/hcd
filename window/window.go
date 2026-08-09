@@ -10,12 +10,10 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/roffe/gocan/adapter"
-	"github.com/roffe/gocan/pkg/gmlan"
 )
 
 //go:embed logo.png
@@ -70,6 +68,8 @@ type Main struct {
 	recBytes    []byte
 
 	vin []byte
+
+	settingsLoaded bool
 }
 
 const (
@@ -291,35 +291,19 @@ func NewMainWindow() *Main {
 	}
 
 	m.setBtn = &widget.Button{
-		Text:     "Save configuration",
+		Text:     "Set Configuration",
 		OnTapped: m.setStates,
 		Icon:     theme.DocumentSaveIcon(),
 	}
 
 	m.getBtn = &widget.Button{
-		Text:     "Load configuration",
+		Text:     "Get Configuration",
 		OnTapped: m.getStates,
 		Icon:     theme.DownloadIcon(),
 	}
 
 	w.SetContent(m.Layout())
 	return m
-}
-
-func (m *Main) displayVin() {
-	c, err := m.initCAN()
-	if err != nil {
-		m.writeOutput(err.Error())
-		return
-	}
-	defer c.Close()
-
-	if err := m.getVIN(gmlan.New(c, 0x24F, 0x64F)); err != nil {
-		m.writeOutput(err.Error())
-		return
-	}
-	m.Window.Clipboard().SetContent(string(m.vin))
-	dialog.ShowInformation("VIN", fmt.Sprintf("VIN: %s copied to Clipboard", m.vin), m.Window)
 }
 
 func (m *Main) disableButtons() {

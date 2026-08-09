@@ -6,3 +6,6 @@ Website = "https://roffe.nu/"
   ID = "com.roffe.hcd"
   Version = "1.0.13"
   Build = 2
+
+[Migrations]
+fyneDo = true

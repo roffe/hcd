@@ -125,21 +125,21 @@ func chipAnchor(chip fyne.Position, size fyne.Size, bulb fyne.Position) fyne.Pos
 
 func (m *Main) frontPanel() fyne.CanvasObject {
 	return lightPanel(frontRes, []marker{
-		{m.uecTurnSignalsCheckbox, fyne.NewPos(6, 4), fyne.NewPos(32, 63)},
-		{m.uecLowBeamsCheckbox, fyne.NewPos(110, 4), fyne.NewPos(56, 63)},
-		{m.uecHighBeamsCheckbox, fyne.NewPos(224, 4), fyne.NewPos(342, 66)},
-		{m.uecParkingLightsCheckbox, fyne.NewPos(316, 105), fyne.NewPos(362, 78)},
+		{m.uecTurnSignalsCheckbox, fyne.NewPos(6, 4), fyne.NewPos(32, 60)},
+		{m.uecLowBeamsCheckbox, fyne.NewPos(110, 4), fyne.NewPos(58, 64)},
+		{m.uecHighBeamsCheckbox, fyne.NewPos(224, 4), fyne.NewPos(340, 74)},
+		{m.uecParkingLightsCheckbox, fyne.NewPos(316, 105), fyne.NewPos(363, 79)},
 		{m.uecFoglightsCheckbox, fyne.NewPos(6, 200), fyne.NewPos(48, 162)},
 	})
 }
 
 func (m *Main) rearPanel() fyne.CanvasObject {
 	return lightPanel(rearRes, []marker{
-		{m.recTailLightsCheckbox, fyne.NewPos(6, 4), fyne.NewPos(210, 72)},
-		{m.recReverseLightsCheckbox, fyne.NewPos(150, 4), fyne.NewPos(238, 88)},
+		{m.recTailLightsCheckbox, fyne.NewPos(6, 4), fyne.NewPos(230, 78)},
+		{m.recReverseLightsCheckbox, fyne.NewPos(150, 4), fyne.NewPos(250, 96)},
 		{m.recNumberPlateCheckbox, fyne.NewPos(310, 4), fyne.NewPos(350, 64)},
-		{m.recStopLightsCheckbox, fyne.NewPos(6, 60), fyne.NewPos(195, 80)},
-		{m.recTurnSignalsCheckbox, fyne.NewPos(6, 110), fyne.NewPos(181, 91)},
+		{m.recStopLightsCheckbox, fyne.NewPos(6, 60), fyne.NewPos(220, 78)},
+		{m.recTurnSignalsCheckbox, fyne.NewPos(6, 110), fyne.NewPos(210, 96)},
 		{m.recFoglightsCheckbox, fyne.NewPos(280, 200), fyne.NewPos(357, 176)},
 	})
 }
