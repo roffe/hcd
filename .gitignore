@@ -1,0 +1,7 @@
+*.exe
+*.zip
+tmp
+dist/*
+!dist/Tech2 SAE J2534 DLL/
+!dist/Tech2 SAE J2534 DLL/**
+!dist/opengl32.dll

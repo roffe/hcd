@@ -1,0 +1,11 @@
+Website = "https://roffe.nu/"
+
+[Details]
+  Icon = "./window/logo.png"
+  Name = "Saab NG9-3 Halogen Check Disabler"
+  ID = "com.roffe.hcd"
+  Version = "2.0.0"
+  Build = 2
+
+[Migrations]
+fyneDo = true
